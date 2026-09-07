@@ -16,3 +16,8 @@ data/processed/*
 !data/processed/.gitkeep
 outputs/runs/*
 !outputs/runs/.gitkeep
+
+# Sealed CLadder split artifacts are local-only. Keep only documentation/placeholders.
+data/splits/*
+!data/splits/.gitkeep
+!data/splits/README.md
