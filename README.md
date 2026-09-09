@@ -12,7 +12,7 @@ The pilot excludes causal discovery, extraction of DAGs from unstructured text, 
 
 ## Current status
 
-The repository structure has been initialized. The research protocol, model selection, data splits, and experiments have not been finalized. No experimental results are available.
+Day 1 protocol design and the sealed-split workflow are complete. The Day 2 implementation skeleton includes the six frozen method configurations, a versioned prompt bundle, deterministic parser, label-free inference boundary, provider-neutral interfaces, wrapper-owned retry policy, event validation, artifact freezing, and a physically separate gold-aware scorer. Provider/model assignments and decoding limits remain provisional and execution is deliberately blocked. No API or benchmark call and no scoring run has been made.
 
 ## Planned methodology
 
@@ -39,6 +39,36 @@ After the protocol is frozen, the study is planned to compare four high-level ap
 
 Day 1 protocol freeze → smoke test → calibration → verifier and risk routing → locked test → evaluation.
 
-## Technology
+## Local setup and validation
 
-Python 3.11 and `uv` are planned for the project. The environment has not yet been initialized and dependencies have not yet been locked.
+Python 3.11 and `uv` are required. From the repository root:
+
+```console
+uv sync --dev
+uv run pytest
+uv run python scripts/validate_preflight.py
+```
+
+Structural preflight is expected to pass. Execution preflight is intentionally expected to fail until every exact provider/model has passed the Step 8 smoke checks and each resolved configuration has been explicitly frozen and enabled:
+
+```console
+uv run python scripts/validate_preflight.py --execution
+```
+
+Do not weaken or bypass this failure. `scripts/run_benchmark.py` uses the same execution gate and does not yet contain a benchmark controller.
+
+## Sealed inference preparation
+
+After the audited source archive and private manifests exist locally, a trusted preparation command can create a strict label-free view for the inference process:
+
+```console
+uv run python scripts/materialize_inference_split.py --split smoke
+```
+
+The loader accepts only `item_id`, `background`, `given_info`, and `question`; it rejects records containing labels or protected metadata. Generated views remain under the ignored `data/splits/private/` area. Locked-test materialization has an additional explicit authorization gate and is not part of initial Day 2 work.
+
+## Provider smoke tests and scoring
+
+`scripts/smoke_provider.py` is restricted to a non-benchmark arithmetic prompt and requires both an installed verified adapter factory and the explicit `--authorize-live-call` flag. Live provider adapters and exact model IDs are not yet frozen, so no smoke call should be attempted merely because the script exists.
+
+Gold-aware scoring is available only through the separate `causalrisk.scoring` namespace and `scripts/score_runs.py`. The scorer checks the run manifest's frozen state before loading the gold file. Raw outputs, inference views, manifests, and run artifacts are local-only and must not be committed.

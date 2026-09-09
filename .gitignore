@@ -17,6 +17,10 @@ data/processed/*
 outputs/runs/*
 !outputs/runs/.gitkeep
 
+# Sealed inference artifacts are local-only and may contain raw model output.
+artifacts/runs/*
+!artifacts/runs/.gitkeep
+
 # Sealed CLadder split artifacts are local-only. Keep only documentation/placeholders.
 data/splits/*
 !data/splits/.gitkeep

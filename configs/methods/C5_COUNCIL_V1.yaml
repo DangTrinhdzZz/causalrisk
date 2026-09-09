@@ -1,0 +1,45 @@
+schema_version: 1
+config_id: C5_COUNCIL_V1
+method_family: heterogeneous_council
+call_budget: 5
+provider_pool: [groq, gemini, mistral, cloudflare_workers_ai, nvidia_nim]
+provider_assignment:
+  analyst: groq
+  semantic_query_critic: gemini
+  graph_identification_critic: mistral
+  formal_numerical_critic: cloudflare_workers_ai
+  adjudicator: nvidia_nim
+model_assignment:
+  analyst: ANALYST_MODEL_ID_PENDING_RUNTIME_VERIFICATION
+  semantic_query_critic: SEMANTIC_MODEL_ID_PENDING_RUNTIME_VERIFICATION
+  graph_identification_critic: GRAPH_MODEL_ID_PENDING_RUNTIME_VERIFICATION
+  formal_numerical_critic: FORMAL_MODEL_ID_PENDING_RUNTIME_VERIFICATION
+  adjudicator: ADJUDICATOR_MODEL_ID_PENDING_RUNTIME_VERIFICATION
+model_family_assignment:
+  analyst: ANALYST_FAMILY_PENDING_RUNTIME_VERIFICATION
+  semantic_query_critic: SEMANTIC_FAMILY_PENDING_RUNTIME_VERIFICATION
+  graph_identification_critic: GRAPH_FAMILY_PENDING_RUNTIME_VERIFICATION
+  formal_numerical_critic: FORMAL_FAMILY_PENDING_RUNTIME_VERIFICATION
+  adjudicator: ADJUDICATOR_FAMILY_PENDING_RUNTIME_VERIFICATION
+prompt_version: prompt_causal_yesno_v1
+prompt_sha256: 1a9db03951bfd6b969a67f198310309dc24c81b6a7cc8c3f397dec1ef6b856fb
+roles: [analyst, semantic_query_critic, graph_identification_critic, formal_numerical_critic, adjudicator]
+temperature: 0.0
+max_output_tokens:
+  analyst: 768
+  semantic_query_critic: 1024
+  graph_identification_critic: 1024
+  formal_numerical_critic: 1024
+  adjudicator: 768
+seed: null
+retry_policy_ref: docs/retry_policy.md
+retry_policy_sha256: c7cac21961a5ef78505d70655c4df87352233fc11974426ff92f55ac0a6659f7
+parser_version: yesno_parser_v1
+logging_version: step9_logging_v1
+allow_retrieval: false
+allow_web: false
+expose_gold_label: false
+expose_metadata: false
+runtime_verified: false
+execution_enabled: false
+notes: Star topology; critics receive only the original item and Analyst card.

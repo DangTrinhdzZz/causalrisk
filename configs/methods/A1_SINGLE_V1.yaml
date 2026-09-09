@@ -1,0 +1,29 @@
+schema_version: 1
+config_id: A1_SINGLE_V1
+method_family: single_agent
+call_budget: 1
+provider_pool: [groq, gemini, mistral, cloudflare_workers_ai, nvidia_nim]
+provider_assignment:
+  analyst: groq
+model_assignment:
+  analyst: ANALYST_MODEL_ID_PENDING_RUNTIME_VERIFICATION
+model_family_assignment:
+  analyst: ANALYST_FAMILY_PENDING_RUNTIME_VERIFICATION
+prompt_version: prompt_causal_yesno_v1
+prompt_sha256: 1a9db03951bfd6b969a67f198310309dc24c81b6a7cc8c3f397dec1ef6b856fb
+roles: [analyst]
+temperature: 0.0
+max_output_tokens:
+  analyst: 768
+seed: null
+retry_policy_ref: docs/retry_policy.md
+retry_policy_sha256: c7cac21961a5ef78505d70655c4df87352233fc11974426ff92f55ac0a6659f7
+parser_version: yesno_parser_v1
+logging_version: step9_logging_v1
+allow_retrieval: false
+allow_web: false
+expose_gold_label: false
+expose_metadata: false
+runtime_verified: false
+execution_enabled: false
+notes: Structural configuration only; decoding and model values are not runtime-frozen.
