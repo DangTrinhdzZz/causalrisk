@@ -48,7 +48,16 @@ class PromptBundle:
 
 
 def file_sha256(path: str | Path) -> str:
-    return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+    """Hash a UTF-8 text file after canonicalizing line endings to LF.
+
+    Git may materialize tracked text as CRLF on Windows and LF on Linux.  The
+    prompt and retry-policy checksums lock semantic text, so they must remain
+    stable across those checkouts.
+    """
+
+    text = Path(path).read_text(encoding="utf-8")
+    canonical_text = text.replace("\r\n", "\n").replace("\r", "\n")
+    return hashlib.sha256(canonical_text.encode("utf-8")).hexdigest()
 
 
 def load_prompt_bundle(path: str | Path) -> PromptBundle:

@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 
 from causalrisk.data import LabelFreeItem
-from causalrisk.prompts import PromptError, load_prompt_bundle, render_prompt
+from causalrisk.prompts import PromptError, file_sha256, load_prompt_bundle, render_prompt
 
 ROOT = Path(__file__).resolve().parents[2]
 BUNDLE = ROOT / "prompts" / "prompt_causal_yesno_v1.json"
@@ -50,3 +50,12 @@ def test_serialized_protected_field_is_rejected():
             output_schema="single_answer",
             final_decision=True,
         )
+
+
+def test_text_checksum_is_stable_across_lf_and_crlf(tmp_path):
+    lf_path = tmp_path / "lf.txt"
+    crlf_path = tmp_path / "crlf.txt"
+    lf_path.write_bytes(b"first line\nsecond line\n")
+    crlf_path.write_bytes(b"first line\r\nsecond line\r\n")
+
+    assert file_sha256(lf_path) == file_sha256(crlf_path)
