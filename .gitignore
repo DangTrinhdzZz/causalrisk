@@ -21,6 +21,9 @@ outputs/runs/*
 artifacts/runs/*
 !artifacts/runs/.gitkeep
 
+# Synthetic provider-smoke reports contain runtime account metadata.
+artifacts/smoke/*
+
 # Sealed CLadder split artifacts are local-only. Keep only documentation/placeholders.
 data/splits/*
 !data/splits/.gitkeep

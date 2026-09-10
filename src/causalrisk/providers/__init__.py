@@ -1,4 +1,4 @@
-"""Provider abstraction exports; live adapters are added only after verification."""
+"""Provider abstraction exports; live adapters remain explicitly execution-gated."""
 
 from causalrisk.providers.base import ProviderAdapter, ProviderRequest, ProviderResponse
 from causalrisk.providers.registry import ProviderRegistry

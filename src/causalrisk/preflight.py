@@ -8,6 +8,17 @@ from pathlib import Path
 
 from causalrisk.config import ConfigError, load_config, validate_config
 from causalrisk.prompts import file_sha256, load_prompt_bundle
+from causalrisk.providers.candidates import PROVIDER_CANDIDATES
+
+EXPECTED_CREDENTIAL_TEMPLATE = {
+    "GROQ_API_KEY",
+    "GEMINI_API_KEY",
+    "MISTRAL_API_KEY",
+    "CLOUDFLARE_ACCOUNT_ID",
+    "CLOUDFLARE_API_TOKEN",
+    "NVIDIA_API_KEY",
+    "OPENAI_API_KEY",
+}
 
 
 @dataclass(frozen=True, slots=True)
@@ -34,6 +45,23 @@ def _git_ignored(repo_root: Path, relative_path: str) -> bool:
         capture_output=True,
     )
     return result.returncode == 0
+
+
+def _credential_template_is_safe(path: Path) -> bool:
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return False
+    assignments: dict[str, str] = {}
+    for raw_line in lines:
+        line = raw_line.strip()
+        if not line or line.startswith("#"):
+            continue
+        if "=" not in line:
+            return False
+        name, value = line.split("=", 1)
+        assignments[name] = value
+    return set(assignments) == EXPECTED_CREDENTIAL_TEMPLATE and all(value == "" for value in assignments.values())
 
 
 def run_preflight(repo_root: str | Path, *, for_execution: bool = False) -> PreflightReport:
@@ -88,10 +116,45 @@ def run_preflight(repo_root: str | Path, *, for_execution: bool = False) -> Pref
         )
     )
 
+    c3 = loaded_configs.get("C3_COUNCIL_V1")
+    c5 = loaded_configs.get("C5_COUNCIL_V1")
+    primary_providers = {candidate.provider for candidate in PROVIDER_CANDIDATES.values() if candidate.primary}
+    roster_matches = bool(
+        c3
+        and c5
+        and c3["provider_assignment"]["analyst"] == c5["provider_assignment"]["analyst"]
+        and c3["provider_assignment"]["critic"] == c5["provider_assignment"]["graph_identification_critic"]
+        and c3["provider_assignment"]["adjudicator"] == c5["provider_assignment"]["adjudicator"]
+        and set(c5["provider_assignment"].values()) == primary_providers
+    )
+    checks.append(
+        PreflightCheck(
+            "amended_roster_consistency",
+            roster_matches,
+            "C3 core roles are nested in the five-family C5 roster" if roster_matches else "roster mapping differs",
+        )
+    )
+
     ignored = _git_ignored(root, "artifacts/runs/preflight-probe")
     checks.append(
         PreflightCheck("artifact_root_ignored", ignored, "artifacts/runs is ignored" if ignored else "not ignored")
     )
+    smoke_ignored = _git_ignored(root, "artifacts/smoke/preflight-probe.json")
+    checks.append(
+        PreflightCheck(
+            "smoke_artifact_ignored",
+            smoke_ignored,
+            "artifacts/smoke is ignored" if smoke_ignored else "not ignored",
+        )
+    )
     env_ignored = _git_ignored(root, ".env")
     checks.append(PreflightCheck("real_env_ignored", env_ignored, ".env is ignored" if env_ignored else "not ignored"))
+    template_safe = _credential_template_is_safe(root / ".env.example")
+    checks.append(
+        PreflightCheck(
+            "credential_template",
+            template_safe,
+            ".env.example contains only empty approved variables" if template_safe else ".env.example is unsafe",
+        )
+    )
     return PreflightReport(tuple(checks))

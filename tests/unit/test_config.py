@@ -37,3 +37,13 @@ def test_c1_is_an_alias_not_an_independent_condition():
     config = load_config(CONFIG_DIR / "C1_BOUNDARY_V1.yaml")
     assert config.values["alias_of"] == "A1_SINGLE_V1"
     assert config.values["call_budget"] == 1
+
+
+def test_openai_is_the_provisional_shared_council_adjudicator():
+    c3 = load_config(CONFIG_DIR / "C3_COUNCIL_V1.yaml").values
+    c5 = load_config(CONFIG_DIR / "C5_COUNCIL_V1.yaml").values
+    assert c3["provider_assignment"]["adjudicator"] == "openai"
+    assert c5["provider_assignment"]["adjudicator"] == "openai"
+    assert "openai" in c3["provider_pool"]
+    assert c3["runtime_verified"] is False
+    assert c5["execution_enabled"] is False

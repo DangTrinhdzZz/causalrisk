@@ -13,5 +13,7 @@ This directory will contain the documents that define and govern the study:
 - `step10_statistical_analysis_plan.md`: statistical tests, accuracy–cost analysis, and evaluation decision rules.
 - `step11_prompt_config_schema.md`: versioned prompt structure, role contracts, and configuration schema.
 - `step12_protocol_freeze_implementation_readiness.md`: Day 1 protocol freeze, implementation gates, and readiness checklist.
+- `amendment_001_openai_adjudicator.md`: pre-execution amendment adding direct OpenAI API as the C3/C5 Adjudicator candidate.
+- `provider_smoke_runbook.md`: one-provider-at-a-time, non-CLadder runtime-verification procedure.
 
 These documents will be written, reviewed, and frozen during Day 1. They are intentionally absent from the repository initialization so that provisional choices are not represented as settled protocol decisions.

@@ -2,11 +2,11 @@ schema_version: 1
 config_id: C3_COUNCIL_V1
 method_family: heterogeneous_council
 call_budget: 3
-provider_pool: [groq, gemini, mistral, cloudflare_workers_ai, nvidia_nim]
+provider_pool: [groq, gemini, mistral, cloudflare_workers_ai, openai, nvidia_nim]
 provider_assignment:
   analyst: groq
   critic: mistral
-  adjudicator: gemini
+  adjudicator: openai
 model_assignment:
   analyst: ANALYST_MODEL_ID_PENDING_RUNTIME_VERIFICATION
   critic: CRITIC_MODEL_ID_PENDING_RUNTIME_VERIFICATION
@@ -34,4 +34,4 @@ expose_gold_label: false
 expose_metadata: false
 runtime_verified: false
 execution_enabled: false
-notes: Provisional provider mapping; no role/model assignment is runtime-frozen.
+notes: OpenAI Adjudicator approved by Amendment 001; exact model and decoding remain runtime-provisional.
