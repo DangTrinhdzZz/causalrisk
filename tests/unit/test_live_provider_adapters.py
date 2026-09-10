@@ -150,6 +150,37 @@ def test_cloudflare_adapter_uses_account_path_and_extracts_usage():
     assert headers["Authorization"] == "Bearer fake-token"
 
 
+def test_cloudflare_adapter_never_treats_reasoning_as_final_content():
+    transport = FakeTransport(
+        {
+            "success": True,
+            "result": {
+                "choices": [
+                    {
+                        "finish_reason": "length",
+                        "message": {
+                            "content": None,
+                            "reasoning_content": "This hidden reasoning is not a final answer.",
+                        },
+                    }
+                ],
+                "usage": {"prompt_tokens": 6, "completion_tokens": 8},
+            },
+        }
+    )
+    adapter = CloudflareWorkersAIAdapter(
+        SecretValue("fake-token"),
+        SecretValue("fake-account"),
+        transport,
+    )
+
+    with pytest.raises(ClassifiedFailure) as error:
+        adapter.complete(request("@cf/qwen/test"))
+
+    assert error.value.failure_code == "configuration/output_cap_truncation"
+    assert error.value.http_status == 200
+
+
 @pytest.mark.parametrize(
     ("status", "failure_code"),
     [

@@ -58,7 +58,7 @@ class CloudflareWorkersAIAdapter:
                 http_status=response.status,
             )
         result = as_mapping(envelope.get("result"), "Cloudflare result is missing or invalid")
-        text = self._result_text(result)
+        text = self._result_text(result, http_status=response.status)
         usage_value = result.get("usage")
         usage = as_mapping(usage_value, "Cloudflare usage is invalid") if usage_value is not None else {}
         input_tokens = usage.get("prompt_tokens", usage.get("input_tokens"))
@@ -79,7 +79,7 @@ class CloudflareWorkersAIAdapter:
         )
 
     @staticmethod
-    def _result_text(result: dict[str, Any]) -> str:
+    def _result_text(result: dict[str, Any], *, http_status: int) -> str:
         direct = result.get("response")
         if isinstance(direct, str):
             return direct
@@ -89,5 +89,17 @@ class CloudflareWorkersAIAdapter:
             if choices:
                 choice = as_mapping(choices[0], "first Cloudflare choice is not an object")
                 message = as_mapping(choice.get("message"), "Cloudflare choice message is missing")
-                return chat_content_text(message.get("content"))
+                content = message.get("content")
+                finish_reason = choice.get("finish_reason")
+                if content is None and finish_reason in {
+                    "length",
+                    "max_output_tokens",
+                    "max_tokens",
+                }:
+                    raise ClassifiedFailure(
+                        "configuration/output_cap_truncation",
+                        "Cloudflare exhausted the output cap before emitting final content",
+                        http_status=http_status,
+                    )
+                return chat_content_text(content)
         raise schema_failure("Cloudflare result contains no response text")
