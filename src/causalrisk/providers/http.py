@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from email.utils import parsedate_to_datetime
@@ -14,6 +15,8 @@ from urllib.request import Request, urlopen
 from causalrisk.retry import ClassifiedFailure
 
 MAX_RESPONSE_BYTES = 10_000_000
+MAX_ERROR_RESPONSE_BYTES = 131_072
+SAFE_PROVIDER_ERROR_FIELD = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$")
 
 
 @dataclass(frozen=True, slots=True)
@@ -47,10 +50,56 @@ def _retry_after_seconds(value: str | None, *, now: datetime | None = None) -> f
     return max(0.0, seconds)
 
 
-def classify_http_status(status: int, retry_after: str | None = None) -> ClassifiedFailure:
+def _safe_provider_error_field(value: Any) -> str | None:
+    if isinstance(value, int) and not isinstance(value, bool):
+        value = str(value)
+    if not isinstance(value, str) or not SAFE_PROVIDER_ERROR_FIELD.fullmatch(value):
+        return None
+    if value.startswith(("sk-", "gsk_", "nvapi-", "AIza")):
+        return None
+    return value
+
+
+def extract_provider_error_metadata(raw: bytes) -> tuple[str | None, str | None, str | None]:
+    """Extract only code/type/param fields; never retain a provider message."""
+
+    if len(raw) > MAX_ERROR_RESPONSE_BYTES:
+        return None, None, None
+    try:
+        document = json.loads(raw.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        return None, None, None
+    if not isinstance(document, dict):
+        return None, None, None
+    error = document.get("error")
+    if not isinstance(error, dict):
+        errors = document.get("errors")
+        if isinstance(errors, list) and errors and isinstance(errors[0], dict):
+            error = errors[0]
+        else:
+            return None, None, None
+    error_code = _safe_provider_error_field(error.get("code") or error.get("status"))
+    error_type = _safe_provider_error_field(error.get("type") or error.get("status"))
+    error_param = _safe_provider_error_field(error.get("param"))
+    return error_code, error_type, error_param
+
+
+def classify_http_status(
+    status: int,
+    retry_after: str | None = None,
+    *,
+    provider_error_code: str | None = None,
+    provider_error_type: str | None = None,
+    provider_error_param: str | None = None,
+) -> ClassifiedFailure:
     """Map a provider HTTP status to the frozen failure taxonomy."""
 
-    if status in {401, 403}:
+    normalized_code = (provider_error_code or "").lower()
+    if normalized_code in {"insufficient_quota", "quota_exceeded", "billing_hard_limit_reached"}:
+        code = "configuration/quota_exhaustion"
+    elif normalized_code in {"model_not_found", "unknown_model"}:
+        code = "configuration/nonexistent_model"
+    elif status in {401, 403}:
         code = "configuration/authentication"
     elif status == 404:
         code = "configuration/nonexistent_model"
@@ -71,6 +120,9 @@ def classify_http_status(status: int, retry_after: str | None = None) -> Classif
         f"provider returned HTTP {status}",
         http_status=status,
         retry_after_seconds=_retry_after_seconds(retry_after),
+        provider_error_code=provider_error_code,
+        provider_error_type=provider_error_type,
+        provider_error_param=provider_error_param,
     )
 
 
@@ -94,8 +146,15 @@ class StdlibJsonHttpTransport:
         except HTTPError as error:
             retry_after = error.headers.get("Retry-After") if error.headers is not None else None
             status = error.code
+            error_metadata = extract_provider_error_metadata(error.read(MAX_ERROR_RESPONSE_BYTES + 1))
             error.close()
-            raise classify_http_status(status, retry_after) from None
+            raise classify_http_status(
+                status,
+                retry_after,
+                provider_error_code=error_metadata[0],
+                provider_error_type=error_metadata[1],
+                provider_error_param=error_metadata[2],
+            ) from None
         except TimeoutError:
             raise ClassifiedFailure("transport/timeout", "provider request timed out") from None
         except (URLError, OSError):

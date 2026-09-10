@@ -104,7 +104,9 @@ def main() -> None:
         print(
             "Smoke failed; "
             f"provider={adapter.name}, model={model_id}, failure_code={failure.failure_code}, "
-            f"http_status={failure.http_status}, failed_attempts={len(retry_events)}."
+            f"http_status={failure.http_status}, provider_error_code={failure.provider_error_code}, "
+            f"provider_error_type={failure.provider_error_type}, provider_error_param={failure.provider_error_param}, "
+            f"failed_attempts={len(retry_events)}."
         )
         if args.write_report:
             report_path = _write_failure_report(adapter.name, model_id, failure, retry_events)
@@ -141,6 +143,9 @@ def _retry_records(retry_events: list[RetryEvent]) -> list[dict[str, Any]]:
             "retry_eligible": event.decision.retry_eligible,
             "backoff_seconds": event.decision.backoff_seconds,
             "resolution_action": event.decision.resolution_action,
+            "provider_error_code": event.provider_error_code,
+            "provider_error_type": event.provider_error_type,
+            "provider_error_param": event.provider_error_param,
         }
         for event in retry_events
     ]
@@ -194,10 +199,13 @@ def _write_failure_report(
         "requested_model_id": requested_model_id,
         "failure_code": failure.failure_code,
         "http_status": failure.http_status,
+        "provider_error_code": failure.provider_error_code,
+        "provider_error_type": failure.provider_error_type,
+        "provider_error_param": failure.provider_error_param,
         "retry_events": _retry_records(retry_events),
         "contains_raw_output": False,
         "runtime_verified": False,
-        "note": "Failure details are intentionally redacted; inspect the provider console separately if needed.",
+        "note": "Only allowlisted code/type/param metadata is retained; provider messages are discarded.",
     }
     path.write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     return path

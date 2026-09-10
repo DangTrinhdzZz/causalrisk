@@ -42,12 +42,18 @@ class ClassifiedFailure(RuntimeError):
         *,
         http_status: int | None = None,
         retry_after_seconds: float | None = None,
+        provider_error_code: str | None = None,
+        provider_error_type: str | None = None,
+        provider_error_param: str | None = None,
     ) -> None:
         super().__init__(safe_message)
         self.failure_code = failure_code
         self.safe_message = safe_message
         self.http_status = http_status
         self.retry_after_seconds = retry_after_seconds
+        self.provider_error_code = provider_error_code
+        self.provider_error_type = provider_error_type
+        self.provider_error_param = provider_error_param
 
 
 class RetryExhausted(ClassifiedFailure):
@@ -69,6 +75,9 @@ class RetryEvent:
     failure_code: str
     http_status: int | None
     decision: RetryDecision
+    provider_error_code: str | None = None
+    provider_error_type: str | None = None
+    provider_error_param: str | None = None
 
 
 def decide_retry(failure: ClassifiedFailure, attempt_index: int) -> RetryDecision:
@@ -111,13 +120,26 @@ def call_with_retries(
             return operation(attempt_index)
         except ClassifiedFailure as failure:
             decision = decide_retry(failure, attempt_index)
-            on_retry_event(RetryEvent(attempt_index, failure.failure_code, failure.http_status, decision))
+            on_retry_event(
+                RetryEvent(
+                    attempt_index,
+                    failure.failure_code,
+                    failure.http_status,
+                    decision,
+                    failure.provider_error_code,
+                    failure.provider_error_type,
+                    failure.provider_error_param,
+                )
+            )
             if not decision.should_retry:
                 if decision.retry_eligible:
                     raise RetryExhausted(
                         failure.failure_code,
                         "eligible failure exhausted the fixed retry budget",
                         http_status=failure.http_status,
+                        provider_error_code=failure.provider_error_code,
+                        provider_error_type=failure.provider_error_type,
+                        provider_error_param=failure.provider_error_param,
                     ) from failure
                 raise
             sleep(decision.backoff_seconds)

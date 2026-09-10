@@ -41,6 +41,12 @@ are written under ignored `artifacts/smoke/` and retain
 `runtime_verified: false`; human review and the remaining execution gates are
 still required.
 
+For a failed request, only allowlisted provider fields `error.code`,
+`error.type`, and `error.param` may be retained. Provider error messages and
+unrecognized values are discarded. These fields distinguish an unsupported
+parameter from an unavailable model without exposing request headers or secret
+values.
+
 ## 3. Required order
 
 1. Run OpenAI first to verify the newly amended Adjudicator path.

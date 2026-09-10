@@ -6,7 +6,7 @@ from causalrisk.credentials import SecretValue
 from causalrisk.providers.candidates import PROVIDER_CANDIDATES
 from causalrisk.providers.cloudflare import CloudflareWorkersAIAdapter
 from causalrisk.providers.gemini import GeminiGenerateContentAdapter
-from causalrisk.providers.http import JsonHttpResponse, classify_http_status
+from causalrisk.providers.http import JsonHttpResponse, classify_http_status, extract_provider_error_metadata
 from causalrisk.providers.openai import OpenAIResponsesAdapter
 from causalrisk.providers.openai_compatible import OpenAICompatibleChatAdapter
 from causalrisk.retry import ClassifiedFailure
@@ -165,6 +165,38 @@ def test_http_statuses_map_to_frozen_taxonomy(status, failure_code):
     assert failure.http_status == status
     if status == 429:
         assert failure.retry_after_seconds == 2.5
+
+
+def test_provider_error_metadata_keeps_only_allowlisted_non_message_fields():
+    raw = (
+        b'{"error":{"message":"do not retain this body",'
+        b'"type":"invalid_request_error","param":"temperature","code":"unsupported_value"}}'
+    )
+    assert extract_provider_error_metadata(raw) == (
+        "unsupported_value",
+        "invalid_request_error",
+        "temperature",
+    )
+    failure = classify_http_status(
+        400,
+        provider_error_code="unsupported_value",
+        provider_error_type="invalid_request_error",
+        provider_error_param="temperature",
+    )
+    assert failure.failure_code == "configuration/malformed_request"
+    assert "do not retain" not in str(failure)
+
+
+def test_provider_error_metadata_rejects_secret_like_or_unstructured_values():
+    raw = b'{"error":{"code":"sk-this-must-not-be-retained","type":"bad value with spaces"}}'
+    assert extract_provider_error_metadata(raw) == (None, None, None)
+
+
+def test_model_not_found_and_quota_codes_override_ambiguous_http_statuses():
+    missing = classify_http_status(400, provider_error_code="model_not_found")
+    quota = classify_http_status(429, provider_error_code="insufficient_quota")
+    assert missing.failure_code == "configuration/nonexistent_model"
+    assert quota.failure_code == "configuration/quota_exhaustion"
 
 
 def test_primary_council_candidate_families_are_distinct_and_nvidia_is_reserve():
