@@ -27,6 +27,12 @@ uv run --env-file .env python scripts/smoke_provider.py `
   --write-report
 ```
 
+The smoke output cap defaults to 128 tokens. The direct OpenAI adapter omits
+`temperature` because the selected model rejected that parameter during the
+2026-09-10 pre-benchmark compatibility check. This records endpoint behavior;
+it does not change another provider's decoding request or enable a benchmark
+configuration.
+
 Replace `openai` with exactly one of:
 
 - `groq`

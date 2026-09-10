@@ -38,7 +38,6 @@ class OpenAIResponsesAdapter:
         payload: dict[str, Any] = {
             "model": request.model_id,
             "input": request.prompt,
-            "temperature": request.temperature,
             "max_output_tokens": request.max_output_tokens,
             "store": False,
         }

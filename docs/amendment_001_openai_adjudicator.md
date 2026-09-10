@@ -51,6 +51,12 @@ with the permitted synthetic smoke checks and calibration split. Current model
 availability, pricing, quota, response schema, latency, token accounting, and
 parameter support remain account- and runtime-dependent.
 
+The 2026-09-10 synthetic compatibility check reached the Responses endpoint
+but rejected an explicit `temperature` field. The direct OpenAI adapter
+therefore omits that field and uses the selected model's endpoint-controlled
+default. This observation does not mark the candidate runtime-verified; a
+successful synthetic smoke response is still required.
+
 Official OpenAI references used for implementation and later price freezing:
 
 - https://developers.openai.com/api/docs/models

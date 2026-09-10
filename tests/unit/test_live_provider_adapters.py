@@ -52,6 +52,7 @@ def test_openai_responses_adapter_extracts_text_usage_and_never_stores_response(
     assert headers["Authorization"] == "Bearer fake-openai"
     assert payload["store"] is False
     assert payload["max_output_tokens"] == 8
+    assert "temperature" not in payload
 
 
 def test_openai_responses_adapter_classifies_output_cap_and_refusal():

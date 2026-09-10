@@ -42,7 +42,7 @@ def main() -> None:
     parser.add_argument("--credential-env", help="environment variable containing the provider key")
     parser.add_argument("--model", help="exact model ID being verified; defaults to the selected candidate")
     parser.add_argument("--temperature", type=float, default=0.0)
-    parser.add_argument("--max-output-tokens", type=int, default=8)
+    parser.add_argument("--max-output-tokens", type=int, default=128)
     parser.add_argument("--write-report", action="store_true", help="write a redacted report under artifacts/smoke")
     parser.add_argument(
         "--authorize-live-call",
