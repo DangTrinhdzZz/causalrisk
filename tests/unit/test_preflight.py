@@ -10,14 +10,10 @@ def test_structural_preflight_passes():
     assert report.passed, [check for check in report.checks if not check.passed]
 
 
-def test_execution_preflight_stays_blocked_before_runtime_freeze():
+def test_execution_preflight_passes_after_controlled_enablement():
     report = run_preflight(ROOT, for_execution=True)
-    assert not report.passed
-    failed_names = {check.name for check in report.checks if not check.passed}
-    assert "A1_SINGLE_V1" in failed_names
-    assert "C5_COUNCIL_V1" in failed_names
-    config_failures = [check for check in report.checks if check.name.endswith("_V1") and not check.passed]
-    assert config_failures
-    assert all(check.detail == "execution is blocked because execution_enabled is false" for check in config_failures)
+    assert report.passed, [check for check in report.checks if not check.passed]
     pricing_check = next(check for check in report.checks if check.name == "official_pricing_policy")
     assert pricing_check.passed
+    provider_check = next(check for check in report.checks if check.name == "provider_availability_policy")
+    assert provider_check.passed

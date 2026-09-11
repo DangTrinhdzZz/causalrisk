@@ -29,6 +29,8 @@ def test_smoke_dry_run_is_deterministic_and_counts_alias_once(monkeypatch, tmp_p
     }
     assert plan.logical_calls == 1020
     assert plan.maximum_provider_attempts == 4080
+    assert plan.run_id == "cladder-smoke-60"
+    assert Path(plan.artifact_path).name == "cladder-smoke-60"
     assert plan.artifacts["C1_BOUNDARY_V1"]["action"] == "alias_existing_a1"
 
 
@@ -40,6 +42,7 @@ def test_three_item_canary_has_one_item_per_rung_and_51_calls(monkeypatch):
     plan = dry_run.build_smoke_dry_run(ROOT, max_items=3)
     assert plan.logical_calls == 51
     assert plan.maximum_provider_attempts == 204
+    assert plan.run_id == "cladder-smoke-canary-3"
     assert plan.provider_calls == {
         "cloudflare_workers_ai": 3,
         "gemini": 3,

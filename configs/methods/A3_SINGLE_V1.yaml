@@ -25,5 +25,5 @@ allow_web: false
 expose_gold_label: false
 expose_metadata: false
 runtime_verified: true
-execution_enabled: false
-notes: Three independent Groq calls; runtime evidence accepted and execution remains disabled.
+execution_enabled: true
+notes: Three independent Groq calls; enabled only for controlled smoke execution under Amendment 004.

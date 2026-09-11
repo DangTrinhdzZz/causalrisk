@@ -1,3 +1,4 @@
+import json
 from decimal import Decimal
 from pathlib import Path
 
@@ -32,6 +33,21 @@ def test_snapshot_matches_roster_and_fails_closed_for_nvidia():
     assert normalized_list_cost_usd(
         pricing, key, UsageBreakdown(55, 245), allow_symbolic_unpriced_provider=True
     ) is None
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [("input", 0), ("normalized_list_cost_usd", 0), ("billing_mode", "paid")],
+)
+def test_snapshot_rejects_nvidia_zero_or_proxy_pricing(tmp_path, field, value):
+    source = ROOT / "configs" / "pricing_2026-09-11.json"
+    document = json.loads(source.read_text(encoding="utf-8"))
+    key = "nvidia_nim:nvidia/nemotron-3.5-lightning-30b-a3b"
+    document["models"][key][field] = value
+    path = tmp_path / "pricing.json"
+    path.write_text(json.dumps(document), encoding="utf-8")
+    with pytest.raises(PricingError, match="NVIDIA symbolic pricing policy"):
+        load_pricing(path)
 
 
 def test_cost_separates_cached_and_reasoning_tokens():

@@ -12,7 +12,7 @@ The pilot excludes causal discovery, extraction of DAGs from unstructured text, 
 
 ## Current status
 
-Day 1 protocol design and the sealed-split workflow are complete. Day 2 has accepted redacted synthetic-smoke evidence for the exact five-provider roster and resolved all six method configurations. The deterministic dry-run validates the sealed 60-item manifest, topology, provider/model mapping, call counts, and artifact disposition without constructing an HTTP client. Execution remains deliberately disabled.
+Day 1 protocol design and the sealed-split workflow are complete. Day 2 has accepted redacted synthetic-smoke evidence for the exact five-provider roster and resolved all six method configurations. Amendment 004 enables controlled smoke-only execution, but no live CLadder call is authorized implicitly: a separately authorized three-item canary must pass before smoke-60. Calibration and locked-test execution remain disabled.
 
 ## Planned methodology
 
@@ -49,14 +49,15 @@ uv run pytest
 uv run python scripts/validate_preflight.py
 ```
 
-Structural preflight is expected to pass. Execution preflight is intentionally expected to fail while the resolved configurations remain disabled. Missing official pricing remains blocked by default; NVIDIA is covered only by the explicit Amendment 003 waiver:
+Structural and execution preflight are expected to pass for the controlled smoke-only configuration. Missing official pricing remains blocked by default; NVIDIA is covered only by the explicit Amendment 003 waiver:
 
 ```console
 uv run python scripts/validate_preflight.py --execution
 ```
 
-Do not weaken or bypass this failure. `scripts/run_benchmark.py` supports only
-the network-free dry-run while execution remains disabled.
+Do not weaken or bypass a failed gate. `scripts/run_benchmark.py` accepts live
+execution only for `split=smoke` with `--authorize-live-smoke`; smoke-60 is
+additionally blocked until the frozen three-item canary passes.
 
 ## Sealed inference preparation
 
@@ -78,5 +79,9 @@ Preview the complete smoke-60 schedule without API calls or artifact writes:
 uv run python scripts/run_benchmark.py --dry-run --split smoke
 uv run python scripts/run_benchmark.py --dry-run --split smoke --max-items 3
 ```
+
+These dry-runs create no HTTP request or runtime artifact. The live canary
+command is intentionally documented in `docs/provider_smoke_runbook.md` and
+must not be run without separate authorization.
 
 Gold-aware scoring is available only through the separate `causalrisk.scoring` namespace and `scripts/score_runs.py`. The scorer checks the run manifest's frozen state before loading the gold file. Raw outputs, inference views, manifests, and run artifacts are local-only and must not be committed.

@@ -45,6 +45,12 @@ class ProviderResponse:
             raise TypeError("provider response text must be a string")
         if self.latency_ms < 0:
             raise ValueError("latency_ms must be non-negative")
+        if self.actual_charge_usd is not None and (
+            isinstance(self.actual_charge_usd, bool)
+            or not isinstance(self.actual_charge_usd, int | float)
+            or self.actual_charge_usd < 0
+        ):
+            raise ValueError("actual_charge_usd must be non-negative or null")
 
 
 @runtime_checkable

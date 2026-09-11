@@ -39,6 +39,35 @@ def load_pricing(path: str | Path) -> dict[str, Any]:
     }
     if set(document.get("models", {})) != expected:
         raise PricingError("pricing snapshot does not exactly match execution roster")
+    for key, price in document["models"].items():
+        if not isinstance(price, dict) or not isinstance(price.get("source"), str):
+            raise PricingError(f"pricing entry is malformed: {key}")
+        if key.startswith("nvidia_nim:"):
+            null_fields = (
+                "input",
+                "cached_input",
+                "output",
+                "reasoning",
+                "normalized_list_cost_usd",
+                "actual_charge_usd",
+            )
+            if (
+                price.get("status") != "official_free_endpoint_unpriced"
+                or price.get("billing_mode") != "free_prototype"
+                or any(price.get(field) is not None for field in null_fields)
+            ):
+                raise PricingError("NVIDIA symbolic pricing policy has drifted")
+            continue
+        if price.get("status") != "priced":
+            raise PricingError(f"priced roster entry has invalid status: {key}")
+        for field in ("input", "output"):
+            value = price.get(field)
+            if isinstance(value, bool) or not isinstance(value, int | float) or value < 0:
+                raise PricingError(f"{field} price is invalid: {key}")
+        for field in ("cached_input", "reasoning"):
+            value = price.get(field)
+            if value is not None and (isinstance(value, bool) or not isinstance(value, int | float) or value < 0):
+                raise PricingError(f"{field} price is invalid: {key}")
     return document
 
 
@@ -61,6 +90,13 @@ def waiver_allows_unpriced_provider(document: dict[str, Any], key: str, waiver: 
         and price is not None
         and waiver.get("source_url") == price.get("source")
         and waiver.get("effective_date") == document.get("effective_date")
+        and isinstance(waiver.get("reason"), str)
+        and bool(waiver["reason"].strip())
+        and price.get("status") == "official_free_endpoint_unpriced"
+        and price.get("billing_mode") == "free_prototype"
+        and price.get("normalized_list_cost_usd") is None
+        and price.get("actual_charge_usd") is None
+        and all(price.get(field) is None for field in ("input", "cached_input", "output", "reasoning"))
     )
 
 

@@ -84,6 +84,18 @@ class OpenAICompatibleChatAdapter:
         text = chat_content_text(message.get("content"))
         usage_value = document.get("usage")
         usage = as_mapping(usage_value, "usage is missing or invalid") if usage_value is not None else {}
+        prompt_details_value = usage.get("prompt_tokens_details")
+        prompt_details = (
+            as_mapping(prompt_details_value, "prompt_tokens_details is invalid")
+            if prompt_details_value is not None
+            else {}
+        )
+        completion_details_value = usage.get("completion_tokens_details")
+        completion_details = (
+            as_mapping(completion_details_value, "completion_tokens_details is invalid")
+            if completion_details_value is not None
+            else {}
+        )
         return ProviderResponse(
             provider=self.name,
             requested_model_id=request.model_id,
@@ -93,6 +105,12 @@ class OpenAICompatibleChatAdapter:
                 optional_token(usage.get("prompt_tokens"), "prompt_tokens is invalid"),
                 optional_token(usage.get("completion_tokens"), "completion_tokens is invalid"),
                 f"{self.name}_reported_usage",
+                reasoning_tokens=optional_token(
+                    completion_details.get("reasoning_tokens"), "reasoning_tokens is invalid"
+                ),
+                cached_input_tokens=optional_token(
+                    prompt_details.get("cached_tokens"), "cached_tokens is invalid"
+                ),
             ),
             latency_ms=latency_ms,
             response_id=optional_string(document.get("id")),

@@ -81,12 +81,19 @@ def test_openai_responses_adapter_extracts_text_usage_and_never_stores_response(
                     "content": [{"type": "output_text", "text": "YES"}],
                 }
             ],
-            "usage": {"input_tokens": 7, "output_tokens": 1},
+            "usage": {
+                "input_tokens": 7,
+                "output_tokens": 3,
+                "input_tokens_details": {"cached_tokens": 2},
+                "output_tokens_details": {"reasoning_tokens": 1},
+            },
         }
     )
     response = OpenAIResponsesAdapter(SecretValue("fake-openai"), transport).complete(request("gpt-test"))
     assert response.text == "YES"
-    assert response.usage.total_tokens == 8
+    assert response.usage.total_tokens == 10
+    assert response.usage.cached_input_tokens == 2
+    assert response.usage.reasoning_tokens == 1
     assert response.response_id == "resp_1"
     _, headers, payload = transport.calls[0]
     assert headers["Authorization"] == "Bearer fake-openai"
@@ -123,7 +130,12 @@ def test_openai_compatible_adapter_uses_declared_provider_fields():
             "id": "chat_1",
             "model": "served-model",
             "choices": [{"message": {"content": "YES"}, "finish_reason": "stop"}],
-            "usage": {"prompt_tokens": 5, "completion_tokens": 1},
+            "usage": {
+                "prompt_tokens": 5,
+                "completion_tokens": 2,
+                "prompt_tokens_details": {"cached_tokens": 1},
+                "completion_tokens_details": {"reasoning_tokens": 1},
+            },
         }
     )
     adapter = OpenAICompatibleChatAdapter(
@@ -138,7 +150,9 @@ def test_openai_compatible_adapter_uses_declared_provider_fields():
     response = adapter.complete(request("requested-model", seed=17))
     assert response.provider == "groq"
     assert response.reported_model_id == "served-model"
-    assert response.usage.total_tokens == 6
+    assert response.usage.total_tokens == 7
+    assert response.usage.cached_input_tokens == 1
+    assert response.usage.reasoning_tokens == 1
     _, _, payload = transport.calls[0]
     assert payload["max_completion_tokens"] == 8
     assert payload["seed"] == 17
@@ -156,12 +170,19 @@ def test_gemini_adapter_extracts_generate_content_shape():
                     "finishReason": "STOP",
                 }
             ],
-            "usageMetadata": {"promptTokenCount": 4, "candidatesTokenCount": 1},
+            "usageMetadata": {
+                "promptTokenCount": 4,
+                "candidatesTokenCount": 1,
+                "thoughtsTokenCount": 2,
+                "cachedContentTokenCount": 1,
+            },
         }
     )
     response = GeminiGenerateContentAdapter(SecretValue("fake-gemini"), transport).complete(request("gemini-test"))
     assert response.text == "YES"
-    assert response.usage.total_tokens == 5
+    assert response.usage.total_tokens == 7
+    assert response.usage.reasoning_tokens == 2
+    assert response.usage.cached_input_tokens == 1
     url, headers, payload = transport.calls[0]
     assert url.endswith("/gemini-test:generateContent")
     assert headers["x-goog-api-key"] == "fake-gemini"

@@ -88,6 +88,11 @@ class GeminiGenerateContentAdapter:
             raise schema_failure("Gemini candidate contains no text")
         usage_value = document.get("usageMetadata")
         usage = as_mapping(usage_value, "Gemini usageMetadata is invalid") if usage_value is not None else {}
+        candidate_tokens = optional_token(usage.get("candidatesTokenCount"), "candidatesTokenCount is invalid")
+        reasoning_tokens = optional_token(usage.get("thoughtsTokenCount"), "thoughtsTokenCount is invalid")
+        output_tokens = (
+            candidate_tokens + (reasoning_tokens or 0) if candidate_tokens is not None else None
+        )
         return ProviderResponse(
             provider=self.name,
             requested_model_id=request.model_id,
@@ -95,8 +100,12 @@ class GeminiGenerateContentAdapter:
             text="\n".join(texts),
             usage=TokenUsage(
                 optional_token(usage.get("promptTokenCount"), "promptTokenCount is invalid"),
-                optional_token(usage.get("candidatesTokenCount"), "candidatesTokenCount is invalid"),
+                output_tokens,
                 "gemini_reported_usage_metadata",
+                reasoning_tokens=reasoning_tokens,
+                cached_input_tokens=optional_token(
+                    usage.get("cachedContentTokenCount"), "cachedContentTokenCount is invalid"
+                ),
             ),
             latency_ms=latency_ms,
             response_id=optional_string(document.get("responseId")),

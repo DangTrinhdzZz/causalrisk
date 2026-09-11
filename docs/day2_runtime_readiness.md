@@ -1,6 +1,6 @@
 # Day 2 Runtime Readiness
 
-**Status:** exact-model synthetic evidence accepted; live smoke-60 remains disabled
+**Status:** controlled smoke enabled; three-item live canary pending separate authorization
 
 ## Runtime evidence
 
@@ -47,16 +47,22 @@ calls.
 The retry ceiling is three retries after the initial attempt, so the absolute
 worst-case transport-attempt ceiling is 4,080. This is a safety bound, not a
 budget forecast. Token and latency fields will use provider-reported values or
-`null`. Estimated cost remains `null` until a versioned pricing configuration
-with sources is frozen; no price is inferred here.
+`null`. Dry-run cost remains `null` because it has no live token usage; the
+versioned pricing snapshot is applied only to reported usage after a call.
 
-## Remaining gate
+## Controlled execution gate
 
-All six configs are runtime-verified, but `execution_enabled` remains `false`.
-The deterministic label-free smoke view is materialized locally and checksum
-verified. Live smoke-60 requires an explicit enablement decision, the
-Amendment 003 NVIDIA pricing waiver, and `--authorize-live-smoke`; dry-run
-does not grant any of these.
+All six configs are runtime-verified and `execution_enabled: true` under
+Amendment 004. The enablement is smoke-only and does not itself authorize an
+API call. The deterministic three-item live canary must be separately run with
+`--authorize-live-smoke` and pass before smoke-60 can be considered. A failed
+canary never starts smoke-60 automatically. Calibration-300 and
+locked-test-600 remain unauthorized.
+
+The canary uses run ID `cladder-smoke-canary-3`, 51 logical calls, and a
+204-transport-attempt ceiling. Its expected artifact root is
+`artifacts/runs/cladder-smoke-canary-3/`. Dry-run creates neither HTTP requests
+nor runtime artifacts.
 
 ## Pricing snapshot
 

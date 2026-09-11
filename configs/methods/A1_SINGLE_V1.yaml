@@ -25,5 +25,5 @@ allow_web: false
 expose_gold_label: false
 expose_metadata: false
 runtime_verified: true
-execution_enabled: false
-notes: Runtime evidence accepted for the exact Groq model; execution remains disabled.
+execution_enabled: true
+notes: Enabled only for the authorized smoke canary and smoke-60 sequence under Amendment 004.

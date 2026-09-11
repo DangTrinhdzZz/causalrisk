@@ -2,7 +2,7 @@
 
 **Decision date:** 2026-09-11
 
-**Status:** approved at protocol level; benchmark execution remains disabled
+**Status:** approved and retained by controlled smoke enablement
 
 **Applies before:** any CLadder smoke, calibration, or locked-test inference
 
@@ -50,8 +50,10 @@ normalized total.
 
 ## 4. Execution gate
 
-All six method configs retain `execution_enabled: false`. This amendment does
-not authorize live API calls, CLadder execution, calibration, or locked-test
-inference. Before any live canary, structural and execution preflight, smoke
-artifact validation, and the existing runtime evidence gates must pass under
-this policy.
+This pricing amendment does not itself authorize live API calls, CLadder
+execution, calibration, or locked-test inference. Amendment 004 subsequently
+sets all six method configs to `execution_enabled: true` for controlled smoke
+execution only. Before any live canary, structural and execution preflight,
+smoke artifact validation, and the existing runtime evidence gates must pass
+under this policy. NVIDIA's normalized price and actual charge remain `null`;
+neither zero nor a proxy price is permitted.

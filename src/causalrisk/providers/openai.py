@@ -53,6 +53,18 @@ class OpenAIResponsesAdapter:
         text = self._output_text(document, response.status)
         usage_value = document.get("usage")
         usage = as_mapping(usage_value, "usage is missing or invalid") if usage_value is not None else {}
+        input_details_value = usage.get("input_tokens_details")
+        input_details = (
+            as_mapping(input_details_value, "input_tokens_details is invalid")
+            if input_details_value is not None
+            else {}
+        )
+        output_details_value = usage.get("output_tokens_details")
+        output_details = (
+            as_mapping(output_details_value, "output_tokens_details is invalid")
+            if output_details_value is not None
+            else {}
+        )
         return ProviderResponse(
             provider=self.name,
             requested_model_id=request.model_id,
@@ -62,6 +74,12 @@ class OpenAIResponsesAdapter:
                 optional_token(usage.get("input_tokens"), "input_tokens is invalid"),
                 optional_token(usage.get("output_tokens"), "output_tokens is invalid"),
                 "openai_responses_reported_usage",
+                reasoning_tokens=optional_token(
+                    output_details.get("reasoning_tokens"), "reasoning_tokens is invalid"
+                ),
+                cached_input_tokens=optional_token(
+                    input_details.get("cached_tokens"), "cached_tokens is invalid"
+                ),
             ),
             latency_ms=latency_ms,
             response_id=optional_string(document.get("id")),

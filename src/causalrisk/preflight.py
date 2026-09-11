@@ -190,6 +190,28 @@ def run_preflight(repo_root: str | Path, *, for_execution: bool = False) -> Pref
             "C3 core roles are nested in the five-family C5 roster" if roster_matches else "roster mapping differs",
         )
     )
+    mistral = PROVIDER_CANDIDATES.get("mistral")
+    nvidia = PROVIDER_CANDIDATES.get("nvidia_nim")
+    provider_policy_matches = bool(
+        mistral
+        and mistral.primary is False
+        and mistral.availability == "excluded_unavailable"
+        and nvidia
+        and nvidia.primary is True
+        and nvidia.availability == "available"
+        and nvidia.intended_role == "skeptical_critic"
+    )
+    checks.append(
+        PreflightCheck(
+            "provider_availability_policy",
+            provider_policy_matches,
+            (
+                "Mistral excluded_unavailable; NVIDIA NIM primary skeptical_critic"
+                if provider_policy_matches
+                else "provider availability or role policy differs"
+            ),
+        )
+    )
 
     ignored = _git_ignored(root, "artifacts/runs/preflight-probe")
     checks.append(

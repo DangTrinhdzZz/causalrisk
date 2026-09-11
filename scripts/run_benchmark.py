@@ -10,12 +10,13 @@ from pathlib import Path
 from typing import Any
 
 from causalrisk.config import load_config
-from causalrisk.controller import ControllerLimits, PacingPolicy, execute_smoke
+from causalrisk.controller import ControllerLimits, PacingPolicy, canary_artifact_passed, execute_smoke
 from causalrisk.credentials import load_credential
 from causalrisk.data import verify_inference_view
 from causalrisk.dry_run import build_smoke_dry_run
 from causalrisk.preflight import run_preflight
 from causalrisk.pricing import load_pricing
+from causalrisk.prompts import load_prompt_bundle
 from causalrisk.providers.candidates import PROVIDER_CANDIDATES
 
 METHOD_IDS = ("A1_SINGLE_V1", "A3_SINGLE_V1", "A5_SINGLE_V1", "C1_BOUNDARY_V1", "C3_COUNCIL_V1", "C5_COUNCIL_V1")
@@ -68,6 +69,12 @@ def main() -> None:
         verify_inference_view(root / "data/splits/private/inference/smoke.json", source_hash),
         args.max_items,
     )
+    artifact_root = root / "artifacts/runs"
+    run_id = "cladder-smoke-canary-3" if args.max_items == 3 else "cladder-smoke-60"
+    if args.max_items is None and not canary_artifact_passed(
+        artifact_root, expected_items=_select_items(items, 3)
+    ):
+        raise SystemExit("Live smoke-60 blocked: the frozen three-item canary artifact has not passed.")
     adapters = {}
     for provider, candidate in PROVIDER_CANDIDATES.items():
         if not candidate.primary or candidate.availability != "available":
@@ -79,11 +86,13 @@ def main() -> None:
     result = execute_smoke(
         split="smoke",
         authorized=args.authorize_live_smoke,
+        run_id=run_id,
         configs=configs,
         items=items,
         adapters=adapters,
         pricing=pricing,
-        artifact_root=root / "artifacts/runs",
+        prompt_bundle=load_prompt_bundle(root / "prompts/prompt_causal_yesno_v1.json"),
+        artifact_root=artifact_root,
         limits=ControllerLimits(logical_limit, logical_limit * 4, 0),
         pacing=PacingPolicy(
             {"groq": 2.0, "nvidia_nim": 1.0, "gemini": 1.0, "cloudflare_workers_ai": 1.0, "openai": 1.0}

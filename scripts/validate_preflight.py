@@ -14,7 +14,7 @@ def main() -> None:
     parser.add_argument(
         "--execution",
         action="store_true",
-        help="require runtime-verified, execution-enabled configs; expected to fail before provider freeze",
+        help="require runtime-verified, execution-enabled configs and the frozen pricing policy",
     )
     args = parser.parse_args()
     root = Path(__file__).resolve().parents[1]

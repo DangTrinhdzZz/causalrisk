@@ -79,3 +79,27 @@ benchmark readiness.
 Do not run CLadder 60 until all primary providers pass, the runtime roster and
 pricing are frozen, the controller passes integration tests, and execution
 preflight passes.
+
+## 5. Controlled CLadder canary
+
+Amendment 004 enables only the smoke controller. It does not change the
+synthetic-smoke commands above and does not authorize calibration or locked
+test. After both preflights and both dry-runs pass, the separately authorized
+PowerShell command is:
+
+```powershell
+uv run --env-file .env python scripts/run_benchmark.py `
+  --split smoke `
+  --max-items 3 `
+  --authorize-live-smoke
+```
+
+Expected run ID: `cladder-smoke-canary-3`. Expected artifact root:
+`artifacts/runs/cladder-smoke-canary-3/`.
+
+The canary passes only when its frozen manifest is complete, all 51 logical
+calls complete with zero terminal errors, provider counts are 33/6/3/3/6 for
+Groq/NVIDIA/Gemini/Cloudflare/OpenAI, no more than 204 transport attempts are
+recorded, every response parses to `YES` or `NO`, exact model identity and
+artifact integrity hold, and NVIDIA/secret/accounting checks remain valid.
+Failure blocks smoke-60; no command chains or automatically starts smoke-60.

@@ -26,5 +26,5 @@ allow_web: false
 expose_gold_label: false
 expose_metadata: false
 runtime_verified: true
-execution_enabled: false
-notes: Runtime-verified alias only; it resolves to A1 and schedules no additional call.
+execution_enabled: true
+notes: Enabled smoke-only alias; it resolves to A1 and schedules no additional call.

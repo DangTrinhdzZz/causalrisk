@@ -28,6 +28,8 @@ METHOD_ORDER = (
 
 @dataclass(frozen=True, slots=True)
 class DryRunPlan:
+    run_id: str
+    artifact_path: str
     split: str
     item_count: int
     manifest_sha256: str
@@ -43,6 +45,8 @@ class DryRunPlan:
     def to_dict(self) -> dict[str, Any]:
         return {
             "mode": "dry_run_no_http",
+            "run_id": self.run_id,
+            "artifact_path": self.artifact_path,
             "split": self.split,
             "item_count": self.item_count,
             "manifest_sha256": self.manifest_sha256,
@@ -54,11 +58,19 @@ class DryRunPlan:
             "retry_policy": "maximum 3 retries / 4 attempts per logical call; failures remain observable",
             "parse_policy": "deterministic yesno_parser_v1; INVALID is never imputed",
             "metadata": {
-                "token_usage": "provider-reported input/output/total or null",
+                "token_usage": "provider-reported input/output/reasoning/cached/total fields remain distinct or null",
                 "latency_ms": "measured per attempt or null",
                 "estimated_cost_usd": None,
+                "actual_charge_usd": None,
+                "providers_with_potential_actual_charge": [
+                    "cloudflare_workers_ai",
+                    "gemini",
+                    "groq",
+                    "openai",
+                ],
                 "cost_note": (
-                    "runtime cost remains null for NVIDIA; priced subtotal and coverage are recorded after calls"
+                    "canary cost is unknown without live token usage; NVIDIA normalized cost remains null under the "
+                    "free_prototype waiver and actual charge is separately provider-reported"
                 ),
             },
             "artifacts": self.artifacts,
@@ -118,9 +130,12 @@ def build_smoke_dry_run(repo_root: str | Path, *, max_items: int | None = None) 
     provider_counts: Counter[str] = Counter()
     artifacts: dict[str, dict[str, str]] = {}
     artifact_root = root / "artifacts" / "runs"
+    run_id = "cladder-smoke-canary-3" if max_items == 3 else "cladder-smoke-60"
+    run_path = artifact_root / run_id
+    run_action = _artifact_state(run_path)
 
     for config_id in METHOD_ORDER:
-        config = load_config(root / "configs" / "methods" / f"{config_id}.yaml")
+        config = load_config(root / "configs" / "methods" / f"{config_id}.yaml", for_execution=True)
         plan = build_execution_plan(config)
         count = len(plan.calls) * item_count
         method_calls[config_id] = count
@@ -134,15 +149,20 @@ def build_smoke_dry_run(repo_root: str | Path, *, max_items: int | None = None) 
             if config.values["model_family_assignment"][call.role] != candidate.model_family:
                 raise ValueError(f"{config_id} model-family mapping differs from the provider roster")
             provider_counts[provider] += item_count
-        run_id = "cladder-smoke-" + config_id.casefold().replace("_", "-")
-        run_path = artifact_root / run_id
         if plan.alias_of:
-            alias_id = "cladder-smoke-" + plan.alias_of.casefold().replace("_", "-")
-            artifacts[config_id] = {"path": str(artifact_root / alias_id), "action": "alias_existing_a1"}
+            artifacts[config_id] = {
+                "path": str(run_path / "calls" / plan.alias_of),
+                "action": "alias_existing_a1",
+            }
         else:
-            artifacts[config_id] = {"path": str(run_path), "action": _artifact_state(run_path)}
+            artifacts[config_id] = {
+                "path": str(run_path / "calls" / config_id),
+                "action": run_action,
+            }
 
     return DryRunPlan(
+        run_id=run_id,
+        artifact_path=str(run_path),
         split="smoke",
         item_count=item_count,
         manifest_sha256=digest,

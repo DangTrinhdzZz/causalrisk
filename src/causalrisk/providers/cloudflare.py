@@ -63,6 +63,18 @@ class CloudflareWorkersAIAdapter:
         usage = as_mapping(usage_value, "Cloudflare usage is invalid") if usage_value is not None else {}
         input_tokens = usage.get("prompt_tokens", usage.get("input_tokens"))
         output_tokens = usage.get("completion_tokens", usage.get("output_tokens"))
+        prompt_details_value = usage.get("prompt_tokens_details")
+        prompt_details = (
+            as_mapping(prompt_details_value, "Cloudflare prompt_tokens_details is invalid")
+            if prompt_details_value is not None
+            else {}
+        )
+        completion_details_value = usage.get("completion_tokens_details")
+        completion_details = (
+            as_mapping(completion_details_value, "Cloudflare completion_tokens_details is invalid")
+            if completion_details_value is not None
+            else {}
+        )
         return ProviderResponse(
             provider=self.name,
             requested_model_id=request.model_id,
@@ -72,6 +84,12 @@ class CloudflareWorkersAIAdapter:
                 optional_token(input_tokens, "Cloudflare input token count is invalid"),
                 optional_token(output_tokens, "Cloudflare output token count is invalid"),
                 "cloudflare_reported_usage_or_null",
+                reasoning_tokens=optional_token(
+                    completion_details.get("reasoning_tokens"), "Cloudflare reasoning_tokens is invalid"
+                ),
+                cached_input_tokens=optional_token(
+                    prompt_details.get("cached_tokens"), "Cloudflare cached_tokens is invalid"
+                ),
             ),
             latency_ms=latency_ms,
             response_id=optional_string(result.get("id")) or optional_string(envelope.get("result_info")),

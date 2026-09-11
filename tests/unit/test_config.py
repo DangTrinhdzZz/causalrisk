@@ -21,9 +21,11 @@ def test_all_six_configs_are_structurally_valid():
     }
 
 
-def test_execution_is_blocked_while_runtime_values_are_provisional():
-    with pytest.raises(ConfigError, match="execution_enabled is false"):
-        load_config(CONFIG_DIR / "A1_SINGLE_V1.yaml", for_execution=True)
+def test_all_six_configs_are_enabled_for_controlled_execution():
+    configs = [load_config(path, for_execution=True) for path in sorted(CONFIG_DIR.glob("*.yaml"))]
+    assert len(configs) == 6
+    assert all(config.values["runtime_verified"] is True for config in configs)
+    assert all(config.values["execution_enabled"] is True for config in configs)
 
 
 def test_config_rejects_gold_or_web_exposure():
@@ -46,7 +48,7 @@ def test_openai_is_the_provisional_shared_council_adjudicator():
     assert c5["provider_assignment"]["adjudicator"] == "openai"
     assert "openai" in c3["provider_pool"]
     assert c3["runtime_verified"] is True
-    assert c5["execution_enabled"] is False
+    assert c5["execution_enabled"] is True
 
 
 def test_nvidia_replaces_mistral_and_c3_is_nested_in_c5():
