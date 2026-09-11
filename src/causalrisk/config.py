@@ -64,7 +64,7 @@ REQUIRED_FIELDS = {
     "runtime_verified",
     "execution_enabled",
 }
-OPTIONAL_FIELDS = {"alias_of", "seed", "notes"}
+OPTIONAL_FIELDS = {"alias_of", "seed", "notes", "allow_symbolic_unpriced_provider"}
 
 
 @dataclass(frozen=True, slots=True)
@@ -94,6 +94,22 @@ def _contains_placeholder(value: Any) -> bool:
     if isinstance(value, list):
         return any(_contains_placeholder(member) for member in value)
     return False
+
+
+def validate_pricing_waiver(document: dict[str, Any]) -> None:
+    waiver = document.get("allow_symbolic_unpriced_provider")
+    if waiver is None:
+        return
+    if not isinstance(waiver, dict) or set(waiver) != {"provider", "source_url", "effective_date", "reason"}:
+        raise ConfigError("allow_symbolic_unpriced_provider must contain provider, source_url, effective_date, reason")
+    if waiver["provider"] != "nvidia_nim":
+        raise ConfigError("symbolic unpriced pricing waiver is allowed only for nvidia_nim")
+    if not isinstance(waiver["source_url"], str) or not waiver["source_url"].startswith("https://"):
+        raise ConfigError("pricing waiver source_url must be an HTTPS URL")
+    if not isinstance(waiver["effective_date"], str) or not waiver["effective_date"]:
+        raise ConfigError("pricing waiver effective_date must be a non-empty string")
+    if not isinstance(waiver["reason"], str) or not waiver["reason"].strip():
+        raise ConfigError("pricing waiver reason must be a non-empty string")
 
 
 def validate_config(document: dict[str, Any], *, for_execution: bool = False) -> None:
@@ -166,6 +182,7 @@ def validate_config(document: dict[str, Any], *, for_execution: bool = False) ->
     for field in ("runtime_verified", "execution_enabled"):
         if not isinstance(document[field], bool):
             raise ConfigError(f"{field} must be boolean")
+    validate_pricing_waiver(document)
 
     if for_execution:
         if document["runtime_verified"] is not True:

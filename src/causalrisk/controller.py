@@ -10,12 +10,18 @@ import time
 from collections import Counter
 from collections.abc import Callable
 from dataclasses import dataclass
+from decimal import Decimal
 from pathlib import Path
 
 from causalrisk.config import MethodConfig, validate_config
 from causalrisk.data import LabelFreeItem
 from causalrisk.parsing import parse_yesno
-from causalrisk.pricing import UsageBreakdown, missing_official_prices, normalized_list_cost_usd
+from causalrisk.pricing import (
+    UsageBreakdown,
+    missing_official_prices,
+    normalized_list_cost_usd,
+    waiver_allows_unpriced_provider,
+)
 from causalrisk.providers import ProviderAdapter, ProviderRequest
 from causalrisk.retry import ClassifiedFailure, call_with_retries
 from causalrisk.topology import build_execution_plan
@@ -81,14 +87,32 @@ def execute_smoke(
     for config in configs:
         validate_config(config.values, for_execution=True)
     missing_prices = missing_official_prices(pricing)
-    if missing_prices:
-        raise ValueError(f"official pricing unavailable: {', '.join(missing_prices)}")
+    for config in configs:
+        for role, provider in config.values["provider_assignment"].items():
+            key = f"{provider}:{config.values['model_assignment'][role]}"
+            if key in missing_prices and not waiver_allows_unpriced_provider(
+                pricing, key, config.values.get("allow_symbolic_unpriced_provider")
+            ):
+                raise ValueError(f"official pricing unavailable without valid waiver: {key}")
 
     completed = completed_call_ids(artifact_root)
     logical_count = attempt_count = terminal_errors = 0
     provider_calls: Counter[str] = Counter()
     last_call_at: dict[str, float] = {}
     outputs: dict[tuple[str, str, int], str] = {}
+    cost_stats = {
+        config.config_id: {
+            "successful_calls": 0,
+            "priced_calls": 0,
+            "total_input_tokens": 0,
+            "total_output_tokens": 0,
+            "priced_input_tokens": 0,
+            "priced_output_tokens": 0,
+            "priced_cost_subtotal_usd": Decimal("0"),
+            "has_unpriced_cost": False,
+        }
+        for config in configs
+    }
 
     for config in configs:
         plan = build_execution_plan(config)
@@ -148,7 +172,25 @@ def execute_smoke(
                         response.usage.cached_input_tokens or 0,
                         response.usage.reasoning_tokens or 0,
                     )
-                    cost = normalized_list_cost_usd(pricing, f"{provider}:{request.model_id}", usage)
+                    pricing_key = f"{provider}:{request.model_id}"
+                    waiver = config.values.get("allow_symbolic_unpriced_provider")
+                    cost = normalized_list_cost_usd(
+                        pricing,
+                        pricing_key,
+                        usage,
+                        allow_symbolic_unpriced_provider=waiver_allows_unpriced_provider(pricing, pricing_key, waiver),
+                    )
+                    stats = cost_stats[config.config_id]
+                    stats["successful_calls"] += 1
+                    stats["total_input_tokens"] += usage.input_tokens
+                    stats["total_output_tokens"] += usage.output_tokens
+                    if cost is None:
+                        stats["has_unpriced_cost"] = True
+                    else:
+                        stats["priced_calls"] += 1
+                        stats["priced_input_tokens"] += usage.input_tokens
+                        stats["priced_output_tokens"] += usage.output_tokens
+                        stats["priced_cost_subtotal_usd"] += cost
                     outputs[(config.config_id, item.item_id, call.position)] = response.text
                     record = {
                         "call_id": call_id,
@@ -181,6 +223,9 @@ def execute_smoke(
                         "normalized_list_cost_usd": str(cost),
                         "actual_charge_usd": response.actual_charge_usd,
                     }
+                    if cost is None:
+                        record["normalized_list_cost_usd"] = None
+                        record["billing_mode"] = pricing["models"][pricing_key].get("billing_mode")
                     _atomic_json(artifact_root / config.config_id / "calls" / f"{call_id}.json", record)
                     provider_calls[provider] += 1
                 except ClassifiedFailure as failure:
@@ -205,9 +250,24 @@ def execute_smoke(
                     )
                     if terminal_errors > limits.max_terminal_errors:
                         raise RuntimeError("terminal-error threshold exceeded") from None
+    cost_summary = {}
+    for config_id, stats in cost_stats.items():
+        total_tokens = stats["total_input_tokens"] + stats["total_output_tokens"]
+        priced_tokens = stats["priced_input_tokens"] + stats["priced_output_tokens"]
+        cost_summary[config_id] = {
+            "total_normalized_cost_usd": None
+            if stats["has_unpriced_cost"]
+            else str(stats["priced_cost_subtotal_usd"]),
+            "priced_cost_subtotal_usd": str(stats["priced_cost_subtotal_usd"]),
+            "priced_call_coverage": stats["priced_calls"] / stats["successful_calls"]
+            if stats["successful_calls"]
+            else None,
+            "priced_token_coverage": priced_tokens / total_tokens if total_tokens else None,
+        }
     return {
         "logical_calls": logical_count,
         "transport_attempts": attempt_count,
         "terminal_errors": terminal_errors,
         "provider_calls": dict(provider_calls),
+        "cost_summary": cost_summary,
     }

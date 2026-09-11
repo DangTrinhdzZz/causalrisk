@@ -42,4 +42,9 @@ expose_gold_label: false
 expose_metadata: false
 runtime_verified: true
 execution_enabled: false
+allow_symbolic_unpriced_provider:
+  provider: nvidia_nim
+  source_url: https://build.nvidia.com/nvidia/nemotron-3.5-lightning-30b-a3b
+  effective_date: "2026-09-11"
+  reason: NVIDIA publishes a free prototype endpoint but no comparable official token list price.
 notes: Exact five-provider evidence accepted under Amendment 002; execution remains disabled.

@@ -9,6 +9,8 @@ from causalrisk.pricing import (
     load_pricing,
     missing_official_prices,
     normalized_list_cost_usd,
+    symbolic_sensitivity_cost_usd,
+    waiver_allows_unpriced_provider,
 )
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -19,6 +21,17 @@ def test_snapshot_matches_roster_and_fails_closed_for_nvidia():
     assert missing_official_prices(pricing) == ("nvidia_nim:nvidia/nemotron-3.5-lightning-30b-a3b",)
     with pytest.raises(PricingError, match="official token price unavailable"):
         normalized_list_cost_usd(pricing, missing_official_prices(pricing)[0], UsageBreakdown(1, 1))
+    key = missing_official_prices(pricing)[0]
+    waiver = {
+        "provider": "nvidia_nim",
+        "source_url": pricing["models"][key]["source"],
+        "effective_date": pricing["effective_date"],
+        "reason": "free prototype endpoint has no official token list price",
+    }
+    assert waiver_allows_unpriced_provider(pricing, key, waiver)
+    assert normalized_list_cost_usd(
+        pricing, key, UsageBreakdown(55, 245), allow_symbolic_unpriced_provider=True
+    ) is None
 
 
 def test_cost_separates_cached_and_reasoning_tokens():
@@ -29,3 +42,7 @@ def test_cost_separates_cached_and_reasoning_tokens():
         UsageBreakdown(input_tokens=100, cached_input_tokens=20, output_tokens=10, reasoning_tokens=4),
     )
     assert cost == Decimal("0.000284")
+
+
+def test_symbolic_sensitivity_adds_assumed_nvidia_rates_without_changing_subtotal():
+    assert symbolic_sensitivity_cost_usd(Decimal("0.001"), 1000, 500, Decimal("2"), Decimal("4")) == Decimal("0.005")

@@ -57,6 +57,37 @@ def complete_pricing():
     }
 
 
+def nvidia_config():
+    values = deepcopy(load_config(ROOT / "configs/methods/A1_SINGLE_V1.yaml").values)
+    values["execution_enabled"] = True
+    values["provider_pool"] = ["nvidia_nim"]
+    values["provider_assignment"] = {"analyst": "nvidia_nim"}
+    values["model_assignment"] = {"analyst": "nvidia/nemotron-3.5-lightning-30b-a3b"}
+    values["model_family_assignment"] = {"analyst": "nemotron-3.5"}
+    values["allow_symbolic_unpriced_provider"] = {
+        "provider": "nvidia_nim",
+        "source_url": "https://build.nvidia.com/nvidia/nemotron-3.5-lightning-30b-a3b",
+        "effective_date": "2026-09-11",
+        "reason": "free prototype endpoint has no official token list price",
+    }
+    return MethodConfig(values, Path("synthetic"))
+
+
+def nvidia_pricing():
+    return {
+        "effective_date": "2026-09-11",
+        "models": {
+            "nvidia_nim:nvidia/nemotron-3.5-lightning-30b-a3b": {
+                "status": "official_free_endpoint_unpriced",
+                "input": None,
+                "output": None,
+                "source": "https://build.nvidia.com/nvidia/nemotron-3.5-lightning-30b-a3b",
+                "billing_mode": "free_prototype",
+            }
+        },
+    }
+
+
 def invoke(adapter, tmp_path, **changes):
     kwargs = {
         "split": "smoke",
@@ -114,3 +145,23 @@ def test_malformed_response_is_terminal(tmp_path):
     with pytest.raises(RuntimeError, match="terminal-error threshold"):
         invoke(adapter, tmp_path)
     assert adapter.calls == 1
+
+
+def test_nvidia_null_cost_propagates_and_reports_coverage(tmp_path):
+    adapter = FakeAdapter(name="nvidia_nim")
+    result = invoke(
+        adapter,
+        tmp_path,
+        configs=(nvidia_config(),),
+        adapters={"nvidia_nim": adapter},
+        pricing=nvidia_pricing(),
+    )
+    assert result["cost_summary"]["A1_SINGLE_V1"] == {
+        "total_normalized_cost_usd": None,
+        "priced_cost_subtotal_usd": "0",
+        "priced_call_coverage": 0.0,
+        "priced_token_coverage": 0.0,
+    }
+    record = next((tmp_path / "A1_SINGLE_V1" / "calls").glob("*.json")).read_text(encoding="utf-8")
+    assert '"normalized_list_cost_usd": null' in record
+    assert '"billing_mode": "free_prototype"' in record

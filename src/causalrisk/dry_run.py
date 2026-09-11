@@ -57,7 +57,9 @@ class DryRunPlan:
                 "token_usage": "provider-reported input/output/total or null",
                 "latency_ms": "measured per attempt or null",
                 "estimated_cost_usd": None,
-                "cost_note": "null until a versioned pricing configuration is frozen",
+                "cost_note": (
+                    "runtime cost remains null for NVIDIA; priced subtotal and coverage are recorded after calls"
+                ),
             },
             "artifacts": self.artifacts,
         }

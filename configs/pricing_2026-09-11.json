@@ -6,7 +6,7 @@
   "effective_date": "2026-09-11",
   "models": {
     "groq:openai/gpt-oss-120b": {"input": 0.15, "cached_input": 0.075, "output": 0.60, "reasoning": 0.60, "source": "https://console.groq.com/docs/model/openai/gpt-oss-120b", "status": "priced"},
-    "nvidia_nim:nvidia/nemotron-3.5-lightning-30b-a3b": {"input": null, "cached_input": null, "output": null, "reasoning": null, "source": "https://build.nvidia.com/nvidia/nemotron-3.5-lightning-30b-a3b", "status": "official_token_price_unavailable"},
+    "nvidia_nim:nvidia/nemotron-3.5-lightning-30b-a3b": {"input": null, "cached_input": null, "output": null, "reasoning": null, "normalized_list_cost_usd": null, "actual_charge_usd": null, "billing_mode": "free_prototype", "source": "https://build.nvidia.com/nvidia/nemotron-3.5-lightning-30b-a3b", "status": "official_free_endpoint_unpriced"},
     "gemini:gemini-3.8-flash": {"input": 0.75, "cached_input": 0.075, "output": 3.75, "reasoning": 3.75, "source": "https://ai.google.dev/gemini-api/docs/pricing", "status": "priced"},
     "cloudflare_workers_ai:@cf/qwen/qwen3-30b-a3b-fp8": {"input": 0.051, "cached_input": null, "output": 0.34, "reasoning": 0.34, "source": "https://developers.cloudflare.com/workers-ai/models/qwen3-30b-a3b-fp8/", "status": "priced"},
     "openai:gpt-5.6-terra": {"input": 2.00, "cached_input": 0.20, "output": 12.00, "reasoning": 12.00, "source": "https://developers.openai.com/api/docs/models/gpt-5.6-terra", "status": "priced"}

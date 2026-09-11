@@ -52,9 +52,29 @@ def missing_official_prices(document: dict[str, Any]) -> tuple[str, ...]:
     )
 
 
-def normalized_list_cost_usd(document: dict[str, Any], key: str, usage: UsageBreakdown) -> Decimal:
+def waiver_allows_unpriced_provider(document: dict[str, Any], key: str, waiver: Any) -> bool:
+    if not key.startswith("nvidia_nim:") or not isinstance(waiver, dict):
+        return False
+    price = document["models"].get(key)
+    return (
+        waiver.get("provider") == "nvidia_nim"
+        and price is not None
+        and waiver.get("source_url") == price.get("source")
+        and waiver.get("effective_date") == document.get("effective_date")
+    )
+
+
+def normalized_list_cost_usd(
+    document: dict[str, Any],
+    key: str,
+    usage: UsageBreakdown,
+    *,
+    allow_symbolic_unpriced_provider: bool = False,
+) -> Decimal | None:
     price = document["models"][key]
     if key in missing_official_prices(document):
+        if allow_symbolic_unpriced_provider and key.startswith("nvidia_nim:"):
+            return None
         raise PricingError(f"official token price unavailable: {key}")
     uncached = usage.input_tokens - usage.cached_input_tokens
     if uncached < 0 or usage.reasoning_tokens > usage.output_tokens:
@@ -71,3 +91,20 @@ def normalized_list_cost_usd(document: dict[str, Any], key: str, usage: UsageBre
     total += Decimal(output_non_reasoning) * Decimal(str(price["output"]))
     total += Decimal(usage.reasoning_tokens) * Decimal(str(reasoning_rate or 0))
     return total / Decimal(1_000_000)
+
+
+def symbolic_sensitivity_cost_usd(
+    priced_subtotal_usd: Decimal,
+    nvidia_input_tokens: int,
+    nvidia_output_tokens: int,
+    assumed_input_rate: Decimal,
+    assumed_output_rate: Decimal,
+) -> Decimal:
+    if min(nvidia_input_tokens, nvidia_output_tokens) < 0:
+        raise PricingError("token counts must be non-negative")
+    if min(assumed_input_rate, assumed_output_rate) < 0:
+        raise PricingError("assumed rates must be non-negative")
+    return priced_subtotal_usd + (
+        Decimal(nvidia_input_tokens) * assumed_input_rate
+        + Decimal(nvidia_output_tokens) * assumed_output_rate
+    ) / Decimal(1_000_000)

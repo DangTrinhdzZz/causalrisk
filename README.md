@@ -49,7 +49,7 @@ uv run pytest
 uv run python scripts/validate_preflight.py
 ```
 
-Structural preflight is expected to pass. Execution preflight is intentionally expected to fail until every exact provider/model has passed the Step 8 smoke checks and each resolved configuration has been explicitly frozen and enabled:
+Structural preflight is expected to pass. Execution preflight is intentionally expected to fail while the resolved configurations remain disabled. Missing official pricing remains blocked by default; NVIDIA is covered only by the explicit Amendment 003 waiver:
 
 ```console
 uv run python scripts/validate_preflight.py --execution

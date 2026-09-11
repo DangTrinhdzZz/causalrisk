@@ -19,3 +19,5 @@ def test_execution_preflight_stays_blocked_before_runtime_freeze():
     config_failures = [check for check in report.checks if check.name.endswith("_V1") and not check.passed]
     assert config_failures
     assert all(check.detail == "execution is blocked because execution_enabled is false" for check in config_failures)
+    pricing_check = next(check for check in report.checks if check.name == "official_pricing_policy")
+    assert pricing_check.passed

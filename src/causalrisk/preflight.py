@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from causalrisk.config import ConfigError, load_config, validate_config
-from causalrisk.pricing import PricingError, load_pricing, missing_official_prices
+from causalrisk.pricing import PricingError, load_pricing, missing_official_prices, waiver_allows_unpriced_provider
 from causalrisk.prompts import file_sha256, load_prompt_bundle
 from causalrisk.providers.candidates import PROVIDER_CANDIDATES
 from causalrisk.runtime_evidence import audit_runtime_evidence
@@ -77,18 +77,6 @@ def run_preflight(repo_root: str | Path, *, for_execution: bool = False) -> Pref
         pricing = None
         missing_prices = ()
         checks.append(PreflightCheck("pricing_snapshot", False, str(error)))
-    if for_execution:
-        checks.append(
-            PreflightCheck(
-                "official_pricing_complete",
-                pricing is not None and not missing_prices,
-                (
-                    "all roster models priced"
-                    if not missing_prices
-                    else f"missing official prices: {', '.join(missing_prices)}"
-                ),
-            )
-        )
     evidence = audit_runtime_evidence(root / "artifacts" / "smoke")
     missing_evidence = sorted(evidence.missing_primary_providers)
     checks.append(
@@ -133,6 +121,34 @@ def run_preflight(repo_root: str | Path, *, for_execution: bool = False) -> Pref
             checks.append(PreflightCheck(path.stem, True, "valid"))
         except (OSError, ValueError) as error:
             checks.append(PreflightCheck(path.stem, False, str(error)))
+
+    if for_execution:
+        waiver_failures = []
+        for key in missing_prices:
+            provider = key.split(":", 1)[0]
+            matching_configs = [
+                values
+                for values in loaded_configs.values()
+                if provider in values.get("provider_assignment", {}).values()
+            ]
+            if provider != "nvidia_nim" or not matching_configs or not all(
+                waiver_allows_unpriced_provider(pricing, key, values.get("allow_symbolic_unpriced_provider"))
+                for values in matching_configs
+            ):
+                waiver_failures.append(key)
+        checks.append(
+            PreflightCheck(
+                "official_pricing_policy",
+                pricing is not None and not waiver_failures,
+                (
+                    "all roster models priced"
+                    if not missing_prices
+                    else "explicit NVIDIA symbolic-pricing waiver accepted"
+                    if not waiver_failures
+                    else f"missing official prices without valid waiver: {', '.join(waiver_failures)}"
+                ),
+            )
+        )
 
     a1 = loaded_configs.get("A1_SINGLE_V1")
     c1 = loaded_configs.get("C1_BOUNDARY_V1")
