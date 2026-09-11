@@ -53,6 +53,17 @@ with sources is frozen; no price is inferred here.
 ## Remaining gate
 
 All six configs are runtime-verified, but `execution_enabled` remains `false`.
-The label-free smoke inference view has not been materialized. Live smoke-60
-requires an explicit enablement decision plus the existing authorization and
-artifact controls; dry-run does not grant either.
+The deterministic label-free smoke view is materialized locally and checksum
+verified. Live smoke-60 requires an explicit enablement decision, completion
+of the NVIDIA official-pricing field, and `--authorize-live-smoke`; dry-run
+does not grant any of these.
+
+## Pricing snapshot
+
+`configs/pricing_2026-09-11.json` freezes USD list prices per million tokens
+effective 2026-09-11. Official sources are the Groq GPT-OSS model page, Google
+Gemini API pricing page, Cloudflare Qwen model page, OpenAI GPT-5.6 Terra model
+page, and NVIDIA Build model page. NVIDIA describes a free prototype endpoint
+but publishes no comparable token list price, so its input/output rates remain
+`null` and execution fails closed. Actual account charges remain a separate
+nullable field and free-tier billing never forces normalized list cost to zero.

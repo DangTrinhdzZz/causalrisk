@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from causalrisk.config import ConfigError, load_config, validate_config
+from causalrisk.pricing import PricingError, load_pricing, missing_official_prices
 from causalrisk.prompts import file_sha256, load_prompt_bundle
 from causalrisk.providers.candidates import PROVIDER_CANDIDATES
 from causalrisk.runtime_evidence import audit_runtime_evidence
@@ -68,6 +69,26 @@ def _credential_template_is_safe(path: Path) -> bool:
 def run_preflight(repo_root: str | Path, *, for_execution: bool = False) -> PreflightReport:
     root = Path(repo_root).resolve()
     checks: list[PreflightCheck] = []
+    try:
+        pricing = load_pricing(root / "configs" / "pricing_2026-09-11.json")
+        missing_prices = missing_official_prices(pricing)
+        checks.append(PreflightCheck("pricing_snapshot", True, pricing["version"]))
+    except (OSError, ValueError, PricingError) as error:
+        pricing = None
+        missing_prices = ()
+        checks.append(PreflightCheck("pricing_snapshot", False, str(error)))
+    if for_execution:
+        checks.append(
+            PreflightCheck(
+                "official_pricing_complete",
+                pricing is not None and not missing_prices,
+                (
+                    "all roster models priced"
+                    if not missing_prices
+                    else f"missing official prices: {', '.join(missing_prices)}"
+                ),
+            )
+        )
     evidence = audit_runtime_evidence(root / "artifacts" / "smoke")
     missing_evidence = sorted(evidence.missing_primary_providers)
     checks.append(

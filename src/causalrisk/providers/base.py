@@ -35,6 +35,8 @@ class ProviderResponse:
     latency_ms: float
     response_id: str | None = None
     http_status: int | None = None
+    finish_reason: str | None = None
+    actual_charge_usd: float | None = None
 
     def __post_init__(self) -> None:
         if not self.provider.strip() or not self.requested_model_id.strip():

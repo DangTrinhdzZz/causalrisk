@@ -11,7 +11,7 @@ BUNDLE = ROOT / "prompts" / "prompt_causal_yesno_v1.json"
 
 def test_rendered_prompt_is_label_free_and_omits_item_id():
     bundle = load_prompt_bundle(BUNDLE)
-    item = LabelFreeItem("opaque-local-key", "X causes Y.", "X is one.", "Is Y one?")
+    item = LabelFreeItem("opaque-local-key", 1, "X causes Y.", "X is one.", "Is Y one?")
     rendered = render_prompt(
         bundle,
         item=item,
@@ -26,7 +26,7 @@ def test_rendered_prompt_is_label_free_and_omits_item_id():
 
 def test_previous_card_is_delimited_as_untrusted_text():
     bundle = load_prompt_bundle(BUNDLE)
-    item = LabelFreeItem("opaque", "Background", "Given", "Question")
+    item = LabelFreeItem("opaque", 1, "Background", "Given", "Question")
     rendered = render_prompt(
         bundle,
         item=item,
@@ -41,7 +41,7 @@ def test_previous_card_is_delimited_as_untrusted_text():
 
 def test_serialized_protected_field_is_rejected():
     bundle = load_prompt_bundle(BUNDLE)
-    item = LabelFreeItem("opaque", "graph_id: 5", "Given", "Question")
+    item = LabelFreeItem("opaque", 1, "graph_id: 5", "Given", "Question")
     with pytest.raises(PromptError, match="protected"):
         render_prompt(
             bundle,

@@ -76,6 +76,7 @@ Preview the complete smoke-60 schedule without API calls or artifact writes:
 
 ```powershell
 uv run python scripts/run_benchmark.py --dry-run --split smoke
+uv run python scripts/run_benchmark.py --dry-run --split smoke --max-items 3
 ```
 
 Gold-aware scoring is available only through the separate `causalrisk.scoring` namespace and `scripts/score_runs.py`. The scorer checks the run manifest's frozen state before loading the gold file. Raw outputs, inference views, manifests, and run artifacts are local-only and must not be committed.

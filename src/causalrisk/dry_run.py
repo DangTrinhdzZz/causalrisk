@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from causalrisk.config import load_config
+from causalrisk.data import verify_inference_view
 from causalrisk.providers.candidates import PROVIDER_CANDIDATES
 from causalrisk.topology import build_execution_plan
 
@@ -95,9 +96,22 @@ def _artifact_state(path: Path) -> str:
     raise ValueError(f"existing artifact has an invalid freeze state: {path.name}")
 
 
-def build_smoke_dry_run(repo_root: str | Path) -> DryRunPlan:
+def build_smoke_dry_run(repo_root: str | Path, *, max_items: int | None = None) -> DryRunPlan:
     root = Path(repo_root).resolve()
     _document, digest = _manifest(root / "data" / "splits" / "private" / "smoke.json")
+    items = verify_inference_view(root / "data" / "splits" / "private" / "inference" / "smoke.json", digest)
+    if len(items) != SMOKE_ITEM_COUNT:
+        raise ValueError("label-free smoke view must contain exactly 60 items")
+    if max_items is not None:
+        if max_items != 3:
+            raise ValueError("the only predeclared canary size is 3 items")
+        selected = tuple(
+            min((item for item in items if item.rung == rung), key=lambda item: item.item_id)
+            for rung in (1, 2, 3)
+        )
+    else:
+        selected = tuple(sorted(items, key=lambda item: item.item_id))
+    item_count = len(selected)
     method_calls: dict[str, int] = {}
     provider_counts: Counter[str] = Counter()
     artifacts: dict[str, dict[str, str]] = {}
@@ -106,7 +120,7 @@ def build_smoke_dry_run(repo_root: str | Path) -> DryRunPlan:
     for config_id in METHOD_ORDER:
         config = load_config(root / "configs" / "methods" / f"{config_id}.yaml")
         plan = build_execution_plan(config)
-        count = len(plan.calls) * SMOKE_ITEM_COUNT
+        count = len(plan.calls) * item_count
         method_calls[config_id] = count
         for call in plan.calls:
             provider = config.values["provider_assignment"][call.role]
@@ -117,7 +131,7 @@ def build_smoke_dry_run(repo_root: str | Path) -> DryRunPlan:
                 raise ValueError(f"{config_id} model mapping differs from the provider roster")
             if config.values["model_family_assignment"][call.role] != candidate.model_family:
                 raise ValueError(f"{config_id} model-family mapping differs from the provider roster")
-            provider_counts[provider] += SMOKE_ITEM_COUNT
+            provider_counts[provider] += item_count
         run_id = "cladder-smoke-" + config_id.casefold().replace("_", "-")
         run_path = artifact_root / run_id
         if plan.alias_of:
@@ -128,7 +142,7 @@ def build_smoke_dry_run(repo_root: str | Path) -> DryRunPlan:
 
     return DryRunPlan(
         split="smoke",
-        item_count=SMOKE_ITEM_COUNT,
+        item_count=item_count,
         manifest_sha256=digest,
         method_calls=method_calls,
         provider_calls=dict(sorted(provider_counts.items())),

@@ -11,13 +11,27 @@ class TokenUsage:
     input_tokens: int | None
     output_tokens: int | None
     accounting_method: str
+    reasoning_tokens: int | None = None
+    cached_input_tokens: int | None = None
 
     def __post_init__(self) -> None:
-        for value in (self.input_tokens, self.output_tokens):
+        for value in (self.input_tokens, self.output_tokens, self.reasoning_tokens, self.cached_input_tokens):
             if value is not None and (isinstance(value, bool) or value < 0):
                 raise ValueError("token counts must be non-negative integers or null")
         if not self.accounting_method.strip():
             raise ValueError("accounting_method must be documented")
+        if (
+            self.reasoning_tokens is not None
+            and self.output_tokens is not None
+            and self.reasoning_tokens > self.output_tokens
+        ):
+            raise ValueError("reasoning_tokens cannot exceed output_tokens")
+        if (
+            self.cached_input_tokens is not None
+            and self.input_tokens is not None
+            and self.cached_input_tokens > self.input_tokens
+        ):
+            raise ValueError("cached_input_tokens cannot exceed input_tokens")
 
     @property
     def total_tokens(self) -> int | None:

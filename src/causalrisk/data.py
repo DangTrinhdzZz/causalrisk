@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 from dataclasses import dataclass
 from pathlib import Path
@@ -12,13 +13,12 @@ class InferenceDataError(ValueError):
     """Raised when an inference record crosses the frozen data boundary."""
 
 
-ALLOWED_INFERENCE_FIELDS = frozenset({"item_id", "background", "given_info", "question"})
+ALLOWED_INFERENCE_FIELDS = frozenset({"item_id", "rung", "background", "given_info", "question"})
 FORBIDDEN_INFERENCE_FIELDS = frozenset(
     {
         "answer",
         "reasoning",
         "groundtruth",
-        "rung",
         "query_type",
         "graph_id",
         "story_id",
@@ -39,6 +39,7 @@ class LabelFreeItem:
     """Only information authorized for the inference process."""
 
     item_id: str
+    rung: int
     background: str
     given_info: str
     question: str
@@ -54,8 +55,11 @@ class LabelFreeItem:
                 f"inference fields mismatch; forbidden={sorted(forbidden)}, "
                 f"unknown={sorted(unknown)}, missing={sorted(missing)}"
             )
-        if not all(isinstance(value[field], str) for field in ALLOWED_INFERENCE_FIELDS):
-            raise InferenceDataError("all inference fields must be strings")
+        text_fields = ALLOWED_INFERENCE_FIELDS - {"rung"}
+        if not all(isinstance(value[field], str) for field in text_fields):
+            raise InferenceDataError("all inference text fields must be strings")
+        if value["rung"] not in {1, 2, 3} or isinstance(value["rung"], bool):
+            raise InferenceDataError("rung must be integer 1, 2, or 3")
         if not value["item_id"].strip() or not value["question"].strip():
             raise InferenceDataError("item_id and question must be non-empty")
         return cls(**{field: value[field] for field in ALLOWED_INFERENCE_FIELDS})
@@ -83,7 +87,8 @@ def load_label_free_items(path: str | Path) -> tuple[LabelFreeItem, ...]:
         if source.suffix.casefold() == ".jsonl":
             records = [json.loads(line) for line in source.read_text(encoding="utf-8").splitlines() if line.strip()]
         else:
-            records = json.loads(source.read_text(encoding="utf-8"))
+            document = json.loads(source.read_text(encoding="utf-8"))
+            records = document.get("items") if isinstance(document, dict) else document
     except (OSError, json.JSONDecodeError) as error:
         raise InferenceDataError(f"cannot read label-free inference data: {source}") from error
     if not isinstance(records, list) or not all(isinstance(record, dict) for record in records):
@@ -93,3 +98,20 @@ def load_label_free_items(path: str | Path) -> tuple[LabelFreeItem, ...]:
     if len(item_ids) != len(set(item_ids)):
         raise InferenceDataError("item_id values must be unique")
     return items
+
+
+def verify_inference_view(path: str | Path, expected_source_sha256: str) -> tuple[LabelFreeItem, ...]:
+    source = Path(path)
+    checksum_path = source.with_suffix(".sha256.json")
+    raw = source.read_bytes()
+    metadata = json.loads(checksum_path.read_text(encoding="utf-8"))
+    document = json.loads(raw)
+    if document.get("schema_version") != 1 or document.get("view_kind") != "label_free_inference":
+        raise InferenceDataError("unsupported inference-view schema")
+    if document.get("split") != "smoke" or document.get("source_manifest_sha256") != expected_source_sha256:
+        raise InferenceDataError("inference view does not match the sealed smoke source")
+    if metadata.get("source_manifest_sha256") != expected_source_sha256:
+        raise InferenceDataError("inference checksum metadata has the wrong source")
+    if metadata.get("inference_view_sha256") != hashlib.sha256(raw).hexdigest():
+        raise InferenceDataError("inference-view checksum mismatch")
+    return load_label_free_items(source)
