@@ -118,13 +118,18 @@ def run_preflight(repo_root: str | Path, *, for_execution: bool = False) -> Pref
 
     c3 = loaded_configs.get("C3_COUNCIL_V1")
     c5 = loaded_configs.get("C5_COUNCIL_V1")
-    primary_providers = {candidate.provider for candidate in PROVIDER_CANDIDATES.values() if candidate.primary}
+    primary_providers = {
+        candidate.provider
+        for candidate in PROVIDER_CANDIDATES.values()
+        if candidate.primary and candidate.availability == "available"
+    }
     roster_matches = bool(
         c3
         and c5
         and c3["provider_assignment"]["analyst"] == c5["provider_assignment"]["analyst"]
         and c3["provider_assignment"]["critic"] == c5["provider_assignment"]["graph_identification_critic"]
         and c3["provider_assignment"]["adjudicator"] == c5["provider_assignment"]["adjudicator"]
+        and set(c3["provider_assignment"].values()).issubset(set(c5["provider_assignment"].values()))
         and set(c5["provider_assignment"].values()) == primary_providers
     )
     checks.append(

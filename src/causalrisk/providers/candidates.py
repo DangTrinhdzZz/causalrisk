@@ -14,6 +14,7 @@ class ProviderCandidate:
     model_family: str
     intended_role: str
     primary: bool
+    availability: str = "available"
 
 
 PROVIDER_CANDIDATES: dict[str, ProviderCandidate] = {
@@ -33,7 +34,8 @@ PROVIDER_CANDIDATES: dict[str, ProviderCandidate] = {
         "mistral-large-2512",
         "mistral-large",
         "critic",
-        True,
+        False,
+        "excluded_unavailable",
     ),
     "gemini": ProviderCandidate(
         "gemini",
@@ -68,7 +70,7 @@ PROVIDER_CANDIDATES: dict[str, ProviderCandidate] = {
         "causalrisk.providers.factories:create_nvidia_adapter",
         "nvidia/nemotron-3.5-lightning-30b-a3b",
         "nemotron-3.5",
-        "reserve",
-        False,
+        "skeptical_critic",
+        True,
     ),
 }

@@ -2,7 +2,7 @@ schema_version: 1
 config_id: A1_SINGLE_V1
 method_family: single_agent
 call_budget: 1
-provider_pool: [groq, gemini, mistral, cloudflare_workers_ai, openai, nvidia_nim]
+provider_pool: [groq, nvidia_nim, gemini, cloudflare_workers_ai, openai]
 provider_assignment:
   analyst: groq
 model_assignment:

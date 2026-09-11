@@ -20,9 +20,9 @@ Benchmark execution remains blocked until the later implementation stage complet
 |---|---|---|---|
 | Groq | Available candidate; free-tier quota checked only at a preliminary level | Candidate primary, specialist, or backup endpoint, subject to capability matching | Exact model ID, live availability, real quota and rate limits, billing behavior, structured output, latency, and retry behavior |
 | Gemini | Available candidate; quota checked only at a preliminary level | Candidate primary or council role | Exact text model ID, live availability, quota and billing limits, structured output, latency, and retry behavior |
-| Mistral | API access created; models remain provisionally selected | `mistral-large-2512` is the primary candidate for Critic or Adjudicator; `ministral-14b-2512` is a backup/lightweight candidate | Endpoint availability, exact identifiers, quota, billing, output normalization, latency, and failure behavior |
+| Mistral | Excluded/unavailable after HTTP 429 (`code=1300`, `type=rate_limited`) and a zero requests-per-minute limit | No execution role or fallback eligibility | Reconsideration requires a later amendment and successful verification |
 | Cloudflare Workers AI | Candidate provider | Candidate specialist or backup endpoint | Account binding, exact model ID, runtime availability, quota, pricing, schema support, latency, and retry behavior |
-| NVIDIA NIM | Candidate provider | Candidate specialist or backup endpoint | Exact endpoint and model ID, runtime availability, quota, pricing, schema support, latency, and retry behavior |
+| NVIDIA NIM | Synthetic smoke passed with the selected Nemotron model | Primary skeptical Critic | Pricing and remaining runtime-freeze gates |
 | OpenRouter | Discovery and emergency fallback only | Not a primary experimental endpoint | Any later use requires verification and the governance action described below |
 
 OpenRouter is not part of the primary experimental endpoint roster. It may be promoted only through an explicit protocol amendment made before affected benchmark execution; the amendment must identify the model/provider route and preserve the same fairness and verification requirements.
@@ -34,7 +34,7 @@ OpenRouter is not part of the primary experimental endpoint roster. It may be pr
 - `C3` uses distinct, capability-matched model families for Analyst, Critic, and Adjudicator roles.
 - `C5` uses distinct, capability-matched model families for the Analyst, three specialist critics, and Adjudicator roles.
 - The council Analyst uses the primary model matched to the corresponding single-agent baseline. Other roles are assigned before evaluation according to causal-reasoning suitability, reliability, price/latency tier, and role fit—not after observing benchmark accuracy.
-- `mistral-large-2512` is provisionally preferred for a Critic or Adjudicator role; `ministral-14b-2512` is a provisional lightweight backup. These assignments are not runtime verified or frozen.
+- NVIDIA `nvidia/nemotron-3.5-lightning-30b-a3b` is the selected skeptical Critic for C3 and the corresponding graph/identification Critic slot in C5. Mistral is excluded and unavailable.
 
 Final role-to-model mappings must be documented and frozen after operational verification and before benchmark execution. A fallback substitution must never silently change the experimental condition.
 
@@ -82,9 +82,9 @@ A provider or model that fails runtime verification is excluded or replaced befo
 
 Completed in Step 8:
 
-- [x] Defined the provisional provider pool: Groq, Gemini, Mistral, Cloudflare Workers AI, and NVIDIA NIM.
+- [x] Defined the execution provider pool: Groq, NVIDIA NIM, Gemini, Cloudflare Workers AI, and OpenAI.
 - [x] Restricted OpenRouter to discovery/emergency fallback status.
-- [x] Recorded provisional Mistral role candidates.
+- [x] Recorded Mistral as excluded/unavailable and NVIDIA NIM as the primary skeptical Critic.
 - [x] Defined role-assignment, fairness, comparability, leakage-control, secret-handling, and fallback rules.
 - [x] Preserved `C1` as the shared `A1/C1` boundary condition.
 - [x] Blocked benchmark execution pending operational verification.

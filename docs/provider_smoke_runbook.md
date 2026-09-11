@@ -36,10 +36,13 @@ configuration.
 Replace `openai` with exactly one of:
 
 - `groq`
-- `mistral`
 - `gemini`
 - `cloudflare_workers_ai`
 - `nvidia_nim`
+
+Mistral remains visible in `--list-candidates` as `excluded_unavailable`, but
+the script rejects it for execution. Its check returned HTTP 429,
+`code=1300`, `type=rate_limited`, and a zero requests-per-minute limit.
 
 The script prints and stores only operational metadata. It does not print the
 credential, prompt, raw response, HTTP headers, or provider error body. Reports
@@ -57,11 +60,13 @@ values.
 
 1. Run OpenAI first to verify the newly amended Adjudicator path.
 2. Run the four other primary-role providers one at a time.
-3. Run NVIDIA only as a reserve-candidate check; it is not part of the primary
-   C5 call budget.
-4. Preserve every success and failure report locally.
-5. Do not change a model ID in place after observing CLadder results. A candidate
+3. Preserve every success and failure report locally.
+4. Do not change a model ID in place after observing CLadder results. A candidate
    replacement must happen before benchmark execution and be documented.
+
+NVIDIA's authorized synthetic smoke has already succeeded at
+`max_output_tokens=1024`: `parsed=YES`, retries 0, input tokens 55, and output
+tokens 245. Do not repeat it without separate authorization.
 
 ## 4. What a successful smoke does and does not prove
 

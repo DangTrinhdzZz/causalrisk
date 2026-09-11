@@ -2,7 +2,7 @@
 
 **Decision date:** 2026-09-10
 
-**Status:** approved at protocol level; runtime verification remains pending
+**Status:** approved at protocol level; NVIDIA reserve/critic clauses superseded by Amendment 002
 
 **Applies before:** any CLadder smoke, calibration, or locked-test inference
 

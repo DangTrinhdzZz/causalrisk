@@ -55,7 +55,7 @@ def main() -> None:
         if args.provider or args.adapter_factory or args.authorize_live_call:
             parser.error("--list-candidates cannot be combined with a live-call option")
         for candidate in PROVIDER_CANDIDATES.values():
-            status = "primary" if candidate.primary else "reserve"
+            status = "primary" if candidate.primary else candidate.availability
             print(
                 f"{candidate.provider}: model={candidate.model_id}, family={candidate.model_family}, "
                 f"role={candidate.intended_role}, status={status}"
@@ -66,6 +66,8 @@ def main() -> None:
         parser.error("choose either --provider or --adapter-factory, not both")
     if args.provider:
         candidate = PROVIDER_CANDIDATES[args.provider]
+        if candidate.availability != "available":
+            parser.error(f"provider is not available for execution: {candidate.provider} ({candidate.availability})")
         factory_specification = candidate.factory_specification
         credential_environment = candidate.credential_environment_variable
         model_id = args.model or candidate.model_id

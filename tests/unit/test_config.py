@@ -47,3 +47,13 @@ def test_openai_is_the_provisional_shared_council_adjudicator():
     assert "openai" in c3["provider_pool"]
     assert c3["runtime_verified"] is False
     assert c5["execution_enabled"] is False
+
+
+def test_nvidia_replaces_mistral_and_c3_is_nested_in_c5():
+    c3 = load_config(CONFIG_DIR / "C3_COUNCIL_V1.yaml").values
+    c5 = load_config(CONFIG_DIR / "C5_COUNCIL_V1.yaml").values
+    assert c3["provider_assignment"]["critic"] == "nvidia_nim"
+    assert c5["provider_assignment"]["graph_identification_critic"] == "nvidia_nim"
+    assert set(c3["provider_assignment"].values()).issubset(set(c5["provider_assignment"].values()))
+    assert "mistral" not in c3["provider_pool"]
+    assert "mistral" not in c5["provider_pool"]

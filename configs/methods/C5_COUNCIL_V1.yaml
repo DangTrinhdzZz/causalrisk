@@ -2,11 +2,11 @@ schema_version: 1
 config_id: C5_COUNCIL_V1
 method_family: heterogeneous_council
 call_budget: 5
-provider_pool: [groq, gemini, mistral, cloudflare_workers_ai, openai, nvidia_nim]
+provider_pool: [groq, nvidia_nim, gemini, cloudflare_workers_ai, openai]
 provider_assignment:
   analyst: groq
   semantic_query_critic: gemini
-  graph_identification_critic: mistral
+  graph_identification_critic: nvidia_nim
   formal_numerical_critic: cloudflare_workers_ai
   adjudicator: openai
 model_assignment:
@@ -42,4 +42,4 @@ expose_gold_label: false
 expose_metadata: false
 runtime_verified: false
 execution_enabled: false
-notes: Star topology with the Amendment 001 OpenAI Adjudicator; NVIDIA remains reserve only.
+notes: Star topology with the Amendment 002 NVIDIA skeptical Critic; benchmark execution remains blocked.

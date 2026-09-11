@@ -3,7 +3,7 @@ config_id: C1_BOUNDARY_V1
 method_family: boundary
 call_budget: 1
 alias_of: A1_SINGLE_V1
-provider_pool: [groq, gemini, mistral, cloudflare_workers_ai, openai, nvidia_nim]
+provider_pool: [groq, nvidia_nim, gemini, cloudflare_workers_ai, openai]
 provider_assignment:
   analyst: groq
 model_assignment:
