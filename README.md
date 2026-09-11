@@ -12,7 +12,7 @@ The pilot excludes causal discovery, extraction of DAGs from unstructured text, 
 
 ## Current status
 
-Day 1 protocol design and the sealed-split workflow are complete. The Day 2 implementation skeleton includes the six frozen method configurations, a versioned prompt bundle, deterministic parser, label-free inference boundary, provider-neutral interfaces, wrapper-owned retry policy, event validation, artifact freezing, and a physically separate gold-aware scorer. Provider/model assignments and decoding limits remain provisional and execution is deliberately blocked. No API or benchmark call and no scoring run has been made.
+Day 1 protocol design and the sealed-split workflow are complete. Day 2 has accepted redacted synthetic-smoke evidence for the exact five-provider roster and resolved all six method configurations. The deterministic dry-run validates the sealed 60-item manifest, topology, provider/model mapping, call counts, and artifact disposition without constructing an HTTP client. Execution remains deliberately disabled.
 
 ## Planned methodology
 
@@ -55,7 +55,8 @@ Structural preflight is expected to pass. Execution preflight is intentionally e
 uv run python scripts/validate_preflight.py --execution
 ```
 
-Do not weaken or bypass this failure. `scripts/run_benchmark.py` uses the same execution gate and does not yet contain a benchmark controller.
+Do not weaken or bypass this failure. `scripts/run_benchmark.py` supports only
+the network-free dry-run while execution remains disabled.
 
 ## Sealed inference preparation
 
@@ -69,6 +70,12 @@ The loader accepts only `item_id`, `background`, `given_info`, and `question`; i
 
 ## Provider smoke tests and scoring
 
-`scripts/smoke_provider.py` is restricted to a non-benchmark arithmetic prompt and requires both an installed verified adapter factory and the explicit `--authorize-live-call` flag. Live provider adapters and exact model IDs are not yet frozen, so no smoke call should be attempted merely because the script exists.
+`scripts/smoke_provider.py` is restricted to a non-benchmark arithmetic prompt and requires both an installed verified adapter factory and the explicit `--authorize-live-call` flag. Existing accepted evidence must not be repeated merely because the script exists.
+
+Preview the complete smoke-60 schedule without API calls or artifact writes:
+
+```powershell
+uv run python scripts/run_benchmark.py --dry-run --split smoke
+```
 
 Gold-aware scoring is available only through the separate `causalrisk.scoring` namespace and `scripts/score_runs.py`. The scorer checks the run manifest's frozen state before loading the gold file. Raw outputs, inference views, manifests, and run artifacts are local-only and must not be committed.

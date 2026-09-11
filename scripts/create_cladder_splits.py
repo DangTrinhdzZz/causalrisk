@@ -198,19 +198,24 @@ def allocate(candidates: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]]
                 slots.extend((split, rung, answer) for _ in range(per_rung // 2))
     slots.sort(key=lambda slot: stable_rank("slot", *slot, slots[:0]))
 
-    for step, (split, rung, answer) in enumerate(slots):
+    for split, rung, answer in slots:
         eligible = [c for c in candidates if c["source_index"] not in used_indices and c["rung"] == rung
                     and c["answer"] == answer and family_owner.get(c["family"], split) == split]
         if not eligible:
             raise RuntimeError("Hard split constraints are infeasible; no sealed split was created")
 
-        def score(candidate: dict[str, Any]) -> tuple[Any, ...]:
+        def score(
+            candidate: dict[str, Any],
+            *,
+            selected_split: str = split,
+            selected_rung: int = rung,
+        ) -> tuple[Any, ...]:
             query = candidate["query_type"]
-            target = pool_query[rung, query] * SPLIT_QUOTAS[split] / pool_rung[rung]
-            after_deviation = abs((query_counts[split, rung, query] + 1) - target)
-            already_owned = 0 if family_owner.get(candidate["family"]) == split else 1
-            graph_repeat = graph_counts[split, rung, candidate["graph_id"]]
-            story_repeat = story_counts[split, rung, candidate["story_id"]]
+            target = pool_query[selected_rung, query] * SPLIT_QUOTAS[selected_split] / pool_rung[selected_rung]
+            after_deviation = abs((query_counts[selected_split, selected_rung, query] + 1) - target)
+            already_owned = 0 if family_owner.get(candidate["family"]) == selected_split else 1
+            graph_repeat = graph_counts[selected_split, selected_rung, candidate["graph_id"]]
+            story_repeat = story_counts[selected_split, selected_rung, candidate["story_id"]]
             return (after_deviation, already_owned, graph_repeat, story_repeat,
                     candidate["tie_rank"])
 
@@ -250,7 +255,9 @@ def write_splits(selected: dict[str, list[dict[str, Any]]], overwrite: bool) -> 
     OUTPUT_DIR.parent.mkdir(parents=True, exist_ok=True)
     temporary = OUTPUT_DIR.parent / ".private-build"
     if temporary.exists():
-        raise FileExistsError("A prior temporary split build exists; remove it only after confirming no generator is running")
+        raise FileExistsError(
+            "A prior temporary split build exists; remove it only after confirming no generator is running"
+        )
     temporary.mkdir()
     try:
         for split, candidates in selected.items():

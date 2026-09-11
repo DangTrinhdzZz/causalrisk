@@ -46,9 +46,9 @@ the script rejects it for execution. Its check returned HTTP 429,
 
 The script prints and stores only operational metadata. It does not print the
 credential, prompt, raw response, HTTP headers, or provider error body. Reports
-are written under ignored `artifacts/smoke/` and retain
-`runtime_verified: false`; human review and the remaining execution gates are
-still required.
+are written under ignored `artifacts/smoke/`. The runtime-evidence validator
+may accept only an exact-model HTTP 200 success parsed as `YES`; human review
+and the remaining execution gates are still required.
 
 For a failed request, only allowlisted provider fields `error.code`,
 `error.type`, and `error.param` may be retained. Provider error messages and

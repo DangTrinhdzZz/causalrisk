@@ -37,7 +37,7 @@ decoding policy, label boundaries, and the A1/C1 alias are unchanged.
 
 ## 3. Execution gate
 
-All method configurations retain `runtime_verified: false` and
-`execution_enabled: false`. No fallback to Mistral is permitted. Any later
+After validating the five exact-model reports, all method configurations set
+`runtime_verified: true` while retaining `execution_enabled: false`. No fallback to Mistral is permitted. Any later
 provider substitution requires another amendment and the applicable smoke and
 preflight checks before benchmark use.

@@ -168,8 +168,10 @@ def validate_config(document: dict[str, Any], *, for_execution: bool = False) ->
             raise ConfigError(f"{field} must be boolean")
 
     if for_execution:
-        if document["runtime_verified"] is not True or document["execution_enabled"] is not True:
-            raise ConfigError("execution is blocked until runtime verification and explicit enablement")
+        if document["runtime_verified"] is not True:
+            raise ConfigError("execution is blocked because runtime_verified is false")
+        if document["execution_enabled"] is not True:
+            raise ConfigError("execution is blocked because execution_enabled is false")
         if _contains_placeholder(document):
             raise ConfigError("execution config contains a provisional placeholder")
         if config_id.startswith("C3_") or config_id.startswith("C5_"):

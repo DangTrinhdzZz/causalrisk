@@ -6,9 +6,9 @@ provider_pool: [groq, nvidia_nim, gemini, cloudflare_workers_ai, openai]
 provider_assignment:
   analyst: groq
 model_assignment:
-  analyst: ANALYST_MODEL_ID_PENDING_RUNTIME_VERIFICATION
+  analyst: openai/gpt-oss-120b
 model_family_assignment:
-  analyst: ANALYST_FAMILY_PENDING_RUNTIME_VERIFICATION
+  analyst: gpt-oss
 prompt_version: prompt_causal_yesno_v1
 prompt_sha256: 1a9db03951bfd6b969a67f198310309dc24c81b6a7cc8c3f397dec1ef6b856fb
 roles: [analyst]
@@ -24,6 +24,6 @@ allow_retrieval: false
 allow_web: false
 expose_gold_label: false
 expose_metadata: false
-runtime_verified: false
+runtime_verified: true
 execution_enabled: false
-notes: Structural configuration only; decoding and model values are not runtime-frozen.
+notes: Runtime evidence accepted for the exact Groq model; execution remains disabled.

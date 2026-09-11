@@ -8,13 +8,13 @@ provider_assignment:
   critic: nvidia_nim
   adjudicator: openai
 model_assignment:
-  analyst: ANALYST_MODEL_ID_PENDING_RUNTIME_VERIFICATION
-  critic: CRITIC_MODEL_ID_PENDING_RUNTIME_VERIFICATION
-  adjudicator: ADJUDICATOR_MODEL_ID_PENDING_RUNTIME_VERIFICATION
+  analyst: openai/gpt-oss-120b
+  critic: nvidia/nemotron-3.5-lightning-30b-a3b
+  adjudicator: gpt-5.6-terra
 model_family_assignment:
-  analyst: ANALYST_FAMILY_PENDING_RUNTIME_VERIFICATION
-  critic: CRITIC_FAMILY_PENDING_RUNTIME_VERIFICATION
-  adjudicator: ADJUDICATOR_FAMILY_PENDING_RUNTIME_VERIFICATION
+  analyst: gpt-oss
+  critic: nemotron-3.5
+  adjudicator: gpt-5.6
 prompt_version: prompt_causal_yesno_v1
 prompt_sha256: 1a9db03951bfd6b969a67f198310309dc24c81b6a7cc8c3f397dec1ef6b856fb
 roles: [analyst, critic, adjudicator]
@@ -32,6 +32,6 @@ allow_retrieval: false
 allow_web: false
 expose_gold_label: false
 expose_metadata: false
-runtime_verified: false
+runtime_verified: true
 execution_enabled: false
-notes: NVIDIA skeptical Critic approved by Amendment 002; benchmark execution remains blocked.
+notes: Exact roster evidence accepted under Amendment 002; execution remains disabled.

@@ -10,17 +10,17 @@ provider_assignment:
   formal_numerical_critic: cloudflare_workers_ai
   adjudicator: openai
 model_assignment:
-  analyst: ANALYST_MODEL_ID_PENDING_RUNTIME_VERIFICATION
-  semantic_query_critic: SEMANTIC_MODEL_ID_PENDING_RUNTIME_VERIFICATION
-  graph_identification_critic: GRAPH_MODEL_ID_PENDING_RUNTIME_VERIFICATION
-  formal_numerical_critic: FORMAL_MODEL_ID_PENDING_RUNTIME_VERIFICATION
-  adjudicator: ADJUDICATOR_MODEL_ID_PENDING_RUNTIME_VERIFICATION
+  analyst: openai/gpt-oss-120b
+  semantic_query_critic: gemini-3.8-flash
+  graph_identification_critic: nvidia/nemotron-3.5-lightning-30b-a3b
+  formal_numerical_critic: "@cf/qwen/qwen3-30b-a3b-fp8"
+  adjudicator: gpt-5.6-terra
 model_family_assignment:
-  analyst: ANALYST_FAMILY_PENDING_RUNTIME_VERIFICATION
-  semantic_query_critic: SEMANTIC_FAMILY_PENDING_RUNTIME_VERIFICATION
-  graph_identification_critic: GRAPH_FAMILY_PENDING_RUNTIME_VERIFICATION
-  formal_numerical_critic: FORMAL_FAMILY_PENDING_RUNTIME_VERIFICATION
-  adjudicator: ADJUDICATOR_FAMILY_PENDING_RUNTIME_VERIFICATION
+  analyst: gpt-oss
+  semantic_query_critic: gemini-3.8
+  graph_identification_critic: nemotron-3.5
+  formal_numerical_critic: qwen3
+  adjudicator: gpt-5.6
 prompt_version: prompt_causal_yesno_v1
 prompt_sha256: 1a9db03951bfd6b969a67f198310309dc24c81b6a7cc8c3f397dec1ef6b856fb
 roles: [analyst, semantic_query_critic, graph_identification_critic, formal_numerical_critic, adjudicator]
@@ -40,6 +40,6 @@ allow_retrieval: false
 allow_web: false
 expose_gold_label: false
 expose_metadata: false
-runtime_verified: false
+runtime_verified: true
 execution_enabled: false
-notes: Star topology with the Amendment 002 NVIDIA skeptical Critic; benchmark execution remains blocked.
+notes: Exact five-provider evidence accepted under Amendment 002; execution remains disabled.

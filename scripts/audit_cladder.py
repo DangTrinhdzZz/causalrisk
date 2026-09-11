@@ -17,7 +17,6 @@ from datetime import date
 from pathlib import Path
 from typing import Any
 
-
 SOURCE_URL = "https://github.com/causalNLP/cladder/raw/main/data/cladder-v1.zip"
 ARCHIVE_PATH = Path("data/raw/cladder-v1.zip")
 REPORT_PATH = Path("docs/cladder_data_audit.md")

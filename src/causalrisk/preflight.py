@@ -9,6 +9,7 @@ from pathlib import Path
 from causalrisk.config import ConfigError, load_config, validate_config
 from causalrisk.prompts import file_sha256, load_prompt_bundle
 from causalrisk.providers.candidates import PROVIDER_CANDIDATES
+from causalrisk.runtime_evidence import audit_runtime_evidence
 
 EXPECTED_CREDENTIAL_TEMPLATE = {
     "GROQ_API_KEY",
@@ -67,6 +68,19 @@ def _credential_template_is_safe(path: Path) -> bool:
 def run_preflight(repo_root: str | Path, *, for_execution: bool = False) -> PreflightReport:
     root = Path(repo_root).resolve()
     checks: list[PreflightCheck] = []
+    evidence = audit_runtime_evidence(root / "artifacts" / "smoke")
+    missing_evidence = sorted(evidence.missing_primary_providers)
+    checks.append(
+        PreflightCheck(
+            "runtime_evidence",
+            not missing_evidence,
+            (
+                f"accepted all 5 execution providers; rejected {len(evidence.rejected)} non-qualifying reports"
+                if not missing_evidence
+                else f"missing valid evidence for: {', '.join(missing_evidence)}"
+            ),
+        )
+    )
     prompt_path = root / "prompts" / "prompt_causal_yesno_v1.json"
     try:
         prompt = load_prompt_bundle(prompt_path)
