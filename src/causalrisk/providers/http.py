@@ -17,6 +17,7 @@ from causalrisk.retry import ClassifiedFailure
 MAX_RESPONSE_BYTES = 10_000_000
 MAX_ERROR_RESPONSE_BYTES = 131_072
 SAFE_PROVIDER_ERROR_FIELD = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$")
+DEFAULT_USER_AGENT = "causalrisk-provider-client/1.0"
 
 
 @dataclass(frozen=True, slots=True)
@@ -138,7 +139,12 @@ class StdlibJsonHttpTransport:
 
     def post(self, url: str, headers: dict[str, str], payload: dict[str, Any]) -> JsonHttpResponse:
         body = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
-        request_headers = {"Accept": "application/json", "Content-Type": "application/json", **headers}
+        request_headers = {
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+            "User-Agent": DEFAULT_USER_AGENT,
+            **headers,
+        }
         request = Request(url, data=body, headers=request_headers, method="POST")
         try:
             with urlopen(request, timeout=self.timeout_seconds) as response:  # noqa: S310 - fixed HTTPS provider URLs

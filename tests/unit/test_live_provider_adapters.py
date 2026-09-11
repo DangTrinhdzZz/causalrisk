@@ -6,7 +6,13 @@ from causalrisk.credentials import SecretValue
 from causalrisk.providers.candidates import PROVIDER_CANDIDATES
 from causalrisk.providers.cloudflare import CloudflareWorkersAIAdapter
 from causalrisk.providers.gemini import GeminiGenerateContentAdapter
-from causalrisk.providers.http import JsonHttpResponse, classify_http_status, extract_provider_error_metadata
+from causalrisk.providers.http import (
+    DEFAULT_USER_AGENT,
+    JsonHttpResponse,
+    StdlibJsonHttpTransport,
+    classify_http_status,
+    extract_provider_error_metadata,
+)
 from causalrisk.providers.openai import OpenAIResponsesAdapter
 from causalrisk.providers.openai_compatible import OpenAICompatibleChatAdapter
 from causalrisk.retry import ClassifiedFailure
@@ -27,6 +33,40 @@ def request(model="model-v1", seed=None):
     from causalrisk.providers import ProviderRequest
 
     return ProviderRequest("Return YES.", model, 0.0, 8, seed)
+
+
+def test_stdlib_transport_sends_stable_user_agent(monkeypatch):
+    observed = {}
+
+    class FakeResponse:
+        status = 200
+        headers = {}
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return False
+
+        def read(self, _limit):
+            return b"{}"
+
+    def fake_urlopen(http_request, *, timeout):
+        observed["headers"] = dict(http_request.header_items())
+        observed["timeout"] = timeout
+        return FakeResponse()
+
+    monkeypatch.setattr("causalrisk.providers.http.urlopen", fake_urlopen)
+
+    response = StdlibJsonHttpTransport(timeout_seconds=30).post(
+        "https://example.invalid/v1/test",
+        {"Authorization": "Bearer fake"},
+        {"prompt": "test"},
+    )
+
+    assert response.status == 200
+    assert observed["headers"]["User-agent"] == DEFAULT_USER_AGENT
+    assert observed["timeout"] == 30
 
 
 def test_openai_responses_adapter_extracts_text_usage_and_never_stores_response():
