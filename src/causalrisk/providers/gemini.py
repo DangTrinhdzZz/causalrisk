@@ -43,13 +43,31 @@ class GeminiGenerateContentAdapter:
         }
         model_path = quote(request.model_id.removeprefix("models/"), safe="")
         started = perf_counter()
-        response = self.transport.post(
-            f"{GEMINI_API_ROOT}/{model_path}:generateContent",
-            {"x-goog-api-key": self.credential.get_secret_value()},
-            payload,
-        )
+        try:
+            response = self.transport.post(
+                f"{GEMINI_API_ROOT}/{model_path}:generateContent",
+                {"x-goog-api-key": self.credential.get_secret_value()},
+                payload,
+            )
+        except ClassifiedFailure as failure:
+            failure.latency_ms = (perf_counter() - started) * 1000
+            raise
         latency_ms = (perf_counter() - started) * 1000
         document = response.document
+        usage_value = document.get("usageMetadata")
+        usage = as_mapping(usage_value, "Gemini usageMetadata is invalid") if usage_value is not None else {}
+        candidate_tokens = optional_token(usage.get("candidatesTokenCount"), "candidatesTokenCount is invalid")
+        reasoning_tokens = optional_token(usage.get("thoughtsTokenCount"), "thoughtsTokenCount is invalid")
+        output_tokens = candidate_tokens + (reasoning_tokens or 0) if candidate_tokens is not None else None
+        token_usage = TokenUsage(
+            optional_token(usage.get("promptTokenCount"), "promptTokenCount is invalid"),
+            output_tokens,
+            "gemini_reported_usage_metadata",
+            reasoning_tokens=reasoning_tokens,
+            cached_input_tokens=optional_token(
+                usage.get("cachedContentTokenCount"), "cachedContentTokenCount is invalid"
+            ),
+        )
         candidates_value = document.get("candidates")
         if candidates_value is None:
             prompt_feedback = document.get("promptFeedback")
@@ -70,6 +88,16 @@ class GeminiGenerateContentAdapter:
                 "configuration/output_cap_truncation",
                 "Gemini stopped at the configured output cap",
                 http_status=response.status,
+                finish_reason=finish_reason,
+                latency_ms=latency_ms,
+                response_id=optional_string(document.get("responseId")),
+                input_tokens=token_usage.input_tokens,
+                output_tokens=token_usage.output_tokens,
+                reasoning_tokens=token_usage.reasoning_tokens,
+                cached_input_tokens=token_usage.cached_input_tokens,
+                total_tokens=token_usage.total_tokens,
+                token_accounting_method=token_usage.accounting_method,
+                safe_response_headers=response.headers,
             )
         if finish_reason in {"SAFETY", "BLOCKLIST", "PROHIBITED_CONTENT", "SPII"}:
             raise ClassifiedFailure(
@@ -86,28 +114,15 @@ class GeminiGenerateContentAdapter:
                 texts.append(part["text"])
         if not texts:
             raise schema_failure("Gemini candidate contains no text")
-        usage_value = document.get("usageMetadata")
-        usage = as_mapping(usage_value, "Gemini usageMetadata is invalid") if usage_value is not None else {}
-        candidate_tokens = optional_token(usage.get("candidatesTokenCount"), "candidatesTokenCount is invalid")
-        reasoning_tokens = optional_token(usage.get("thoughtsTokenCount"), "thoughtsTokenCount is invalid")
-        output_tokens = (
-            candidate_tokens + (reasoning_tokens or 0) if candidate_tokens is not None else None
-        )
         return ProviderResponse(
             provider=self.name,
             requested_model_id=request.model_id,
             reported_model_id=optional_string(document.get("modelVersion")),
             text="\n".join(texts),
-            usage=TokenUsage(
-                optional_token(usage.get("promptTokenCount"), "promptTokenCount is invalid"),
-                output_tokens,
-                "gemini_reported_usage_metadata",
-                reasoning_tokens=reasoning_tokens,
-                cached_input_tokens=optional_token(
-                    usage.get("cachedContentTokenCount"), "cachedContentTokenCount is invalid"
-                ),
-            ),
+            usage=token_usage,
             latency_ms=latency_ms,
             response_id=optional_string(document.get("responseId")),
             http_status=response.status,
+            finish_reason=finish_reason,
+            safe_response_headers=response.headers,
         )

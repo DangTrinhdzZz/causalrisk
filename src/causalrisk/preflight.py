@@ -2,11 +2,15 @@
 
 from __future__ import annotations
 
+import json
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
+from causalrisk.capacity import CapacityError, build_capacity_plan, load_provider_limits
 from causalrisk.config import ConfigError, load_config, validate_config
+from causalrisk.execution_policy import MINIMUM_INTERVAL_SECONDS, get_execution_policy
+from causalrisk.lineage import verify_r1_remediation_input
 from causalrisk.pricing import PricingError, load_pricing, missing_official_prices, waiver_allows_unpriced_provider
 from causalrisk.prompts import file_sha256, load_prompt_bundle
 from causalrisk.providers.candidates import PROVIDER_CANDIDATES
@@ -66,9 +70,17 @@ def _credential_template_is_safe(path: Path) -> bool:
     return set(assignments) == EXPECTED_CREDENTIAL_TEMPLATE and all(value == "" for value in assignments.values())
 
 
-def run_preflight(repo_root: str | Path, *, for_execution: bool = False) -> PreflightReport:
+def run_preflight(
+    repo_root: str | Path,
+    *,
+    for_execution: bool = False,
+    split: str | None = None,
+    max_new_items: int | None = None,
+) -> PreflightReport:
     root = Path(repo_root).resolve()
     checks: list[PreflightCheck] = []
+    if split is not None and split not in {"smoke", "calibration", "locked_test"}:
+        raise ValueError("split must be smoke, calibration, or locked_test")
     try:
         pricing = load_pricing(root / "configs" / "pricing_2026-09-11.json")
         missing_prices = missing_official_prices(pricing)
@@ -122,7 +134,93 @@ def run_preflight(repo_root: str | Path, *, for_execution: bool = False) -> Pref
         except (OSError, ValueError) as error:
             checks.append(PreflightCheck(path.stem, False, str(error)))
 
+    analyst_caps_match = bool(loaded_configs) and all(
+        values["max_output_tokens"]["analyst"] == 2048
+        for values in loaded_configs.values()
+        if "analyst" in values.get("max_output_tokens", {})
+    )
+    other_caps_match = bool(
+        loaded_configs.get("C3_COUNCIL_V1")
+        and loaded_configs["C3_COUNCIL_V1"]["max_output_tokens"]
+        == {"analyst": 2048, "critic": 1024, "adjudicator": 768}
+        and loaded_configs.get("C5_COUNCIL_V1")
+        and loaded_configs["C5_COUNCIL_V1"]["max_output_tokens"]
+        == {
+            "analyst": 2048,
+            "semantic_query_critic": 1024,
+            "graph_identification_critic": 1024,
+            "formal_numerical_critic": 1024,
+            "adjudicator": 768,
+        }
+    )
+    checks.append(
+        PreflightCheck(
+            "analyst_output_cap",
+            analyst_caps_match and other_caps_match,
+            "all analyst mirrors use 2048; every non-analyst cap is unchanged",
+        )
+    )
+    checks.append(
+        PreflightCheck(
+            "groq_pacing_policy",
+            MINIMUM_INTERVAL_SECONDS.get("groq") == 10.0,
+            "Groq minimum start interval is 10.0 seconds for every split",
+        )
+    )
+
+    try:
+        provider_limits = load_provider_limits(root / "configs/provider_limits_2026-09-12.json")
+        checks.append(PreflightCheck("provider_limit_snapshot", True, provider_limits["version"]))
+    except (OSError, CapacityError) as error:
+        provider_limits = None
+        checks.append(PreflightCheck("provider_limit_snapshot", False, str(error)))
+
     if for_execution:
+        execution_split = split or "smoke"
+        policy = get_execution_policy(execution_split)
+        session_bound_valid = max_new_items is None or (
+            not isinstance(max_new_items, bool)
+            and isinstance(max_new_items, int)
+            and 1 <= max_new_items <= policy.item_count
+        )
+        checks.append(
+            PreflightCheck(
+                "session_item_limit",
+                session_bound_valid,
+                "full-run session" if max_new_items is None else f"max_new_items={max_new_items}",
+            )
+        )
+        checks.append(
+            PreflightCheck(
+                "split_live_authorization_state",
+                policy.live_authorized,
+                "AUTHORIZED_BY_POLICY_GATE" if policy.live_authorized else "BLOCKED_NOT_AUTHORIZED",
+            )
+        )
+        if provider_limits is not None:
+            forensic = json.loads(
+                (root / "docs/r1_operational_canary_forensic_aggregate.json").read_text(encoding="utf-8")
+            )
+            capacity = build_capacity_plan(
+                policy,
+                provider_limits=provider_limits,
+                forensic_report=forensic,
+                max_new_items=max_new_items if session_bound_valid else None,
+            )
+            assessment = capacity["limit_assessment"]
+            detail = ", ".join(assessment["violations"] or assessment["warnings"]) or "within declared limits"
+            checks.append(PreflightCheck("projected_provider_capacity", assessment["passed"], detail))
+        else:
+            checks.append(PreflightCheck("projected_provider_capacity", False, "provider limits unavailable"))
+        if execution_split == "smoke":
+            r1_intact = verify_r1_remediation_input(root / "artifacts/runs")
+            checks.append(
+                PreflightCheck(
+                    "r1_immutable_remediation_lineage",
+                    r1_intact,
+                    "R1 frozen failed tree checksum matches Amendment 005" if r1_intact else "R1 lineage mismatch",
+                )
+            )
         waiver_failures = []
         for key in missing_prices:
             provider = key.split(":", 1)[0]

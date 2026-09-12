@@ -12,7 +12,12 @@ The pilot excludes causal discovery, extraction of DAGs from unstructured text, 
 
 ## Current status
 
-Day 1 protocol design and the sealed-split workflow are complete. Day 2 has accepted redacted synthetic-smoke evidence for the exact five-provider roster and resolved all six method configurations. Amendment 004 enables controlled smoke-only execution, but no live CLadder call is authorized implicitly: a separately authorized three-item canary must pass before smoke-60. Calibration and locked-test execution remain disabled.
+Day 1 protocol design and the sealed-split workflow are complete. The frozen R1
+operational canary failed before any gold was opened and remains an immutable
+audit trail. Amendment 005 defines the remediated cross-split R2 execution
+revision. No live CLadder call is authorized implicitly: a separately
+authorized R2 three-item canary must pass before smoke-60. Calibration and
+locked-test live execution remain disabled.
 
 ## Planned methodology
 
@@ -49,15 +54,18 @@ uv run pytest
 uv run python scripts/validate_preflight.py
 ```
 
-Structural and execution preflight are expected to pass for the controlled smoke-only configuration. Missing official pricing remains blocked by default; NVIDIA is covered only by the explicit Amendment 003 waiver:
+Structural and smoke execution preflight are expected to pass for the R2
+controlled-smoke configuration. Missing official pricing remains blocked by
+default; NVIDIA is covered only by the explicit Amendment 003 waiver:
 
 ```console
-uv run python scripts/validate_preflight.py --execution
+uv run python scripts/validate_preflight.py --execution --split smoke
 ```
 
-Do not weaken or bypass a failed gate. `scripts/run_benchmark.py` accepts live
-execution only for `split=smoke` with `--authorize-live-smoke`; smoke-60 is
-additionally blocked until the frozen three-item canary passes.
+Do not weaken or bypass a failed gate. Live acknowledgement flags are
+split-specific; only smoke is enabled by policy. Smoke-60 is additionally
+blocked until the frozen R2 three-item canary passes. Calibration and locked
+test remain `BLOCKED_NOT_AUTHORIZED` even when their flags are supplied.
 
 ## Sealed inference preparation
 
@@ -65,19 +73,27 @@ After the audited source archive and private manifests exist locally, a trusted 
 
 ```console
 uv run python scripts/materialize_inference_split.py --split smoke
+uv run python scripts/materialize_inference_split.py --split calibration
+uv run python scripts/materialize_inference_split.py --split locked_test
 ```
 
-The loader accepts only `item_id`, `background`, `given_info`, and `question`; it rejects records containing labels or protected metadata. Generated views remain under the ignored `data/splits/private/` area. Locked-test materialization has an additional explicit authorization gate and is not part of initial Day 2 work.
+The loader accepts only `item_id`, `background`, `given_info`, and `question`;
+it rejects records containing labels or protected metadata. Generated views,
+checksums, and the controller-only smoke canary selector remain under the
+ignored `data/splits/private/` area. Rung is absent from every inference view
+and model prompt.
 
 ## Provider smoke tests and scoring
 
 `scripts/smoke_provider.py` is restricted to a non-benchmark arithmetic prompt and requires both an installed verified adapter factory and the explicit `--authorize-live-call` flag. Existing accepted evidence must not be repeated merely because the script exists.
 
-Preview the complete smoke-60 schedule without API calls or artifact writes:
+Preview each fixed R2 schedule without API calls or runtime-artifact writes:
 
 ```powershell
 uv run python scripts/run_benchmark.py --dry-run --split smoke
 uv run python scripts/run_benchmark.py --dry-run --split smoke --max-items 3
+uv run python scripts/run_benchmark.py --dry-run --split calibration
+uv run python scripts/run_benchmark.py --dry-run --split locked_test
 ```
 
 These dry-runs create no HTTP request or runtime artifact. The live canary

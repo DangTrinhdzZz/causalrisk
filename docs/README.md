@@ -16,6 +16,9 @@ This directory will contain the documents that define and govern the study:
 - `amendment_001_openai_adjudicator.md`: pre-execution amendment adding direct OpenAI API as the C3/C5 Adjudicator candidate.
 - `amendment_003_nvidia_pricing_policy.md`: symbolic-null NVIDIA pricing waiver and accounting rules.
 - `amendment_004_controlled_smoke_enablement.md`: smoke-only enablement, live canary sequencing, and pass gates.
+- `amendment_005_cross_split_execution_remediation.md`: frozen R1 failure analysis, narrow remediation, and the cross-split R2 execution contract.
+- `r1_operational_canary_forensic_aggregate.json`: label-free operational aggregate for the immutable failed R1 canary.
+- `day2_runtime_readiness.md`: current offline readiness, capacity, and phase-gate status.
 - `provider_smoke_runbook.md`: one-provider-at-a-time, non-CLadder runtime-verification procedure.
 
 These documents will be written, reviewed, and frozen during Day 1. They are intentionally absent from the repository initialization so that provisional choices are not represented as settled protocol decisions.

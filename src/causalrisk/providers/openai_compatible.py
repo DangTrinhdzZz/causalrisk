@@ -50,11 +50,15 @@ class OpenAICompatibleChatAdapter:
             payload[self.seed_field] = request.seed
 
         started = perf_counter()
-        response = self.transport.post(
-            self.endpoint,
-            {"Authorization": f"Bearer {self.credential.get_secret_value()}"},
-            payload,
-        )
+        try:
+            response = self.transport.post(
+                self.endpoint,
+                {"Authorization": f"Bearer {self.credential.get_secret_value()}"},
+                payload,
+            )
+        except ClassifiedFailure as failure:
+            failure.latency_ms = (perf_counter() - started) * 1000
+            raise
         latency_ms = (perf_counter() - started) * 1000
         document = response.document
         choices = as_sequence(document.get("choices"), "choices is missing or invalid")
@@ -62,11 +66,46 @@ class OpenAICompatibleChatAdapter:
             raise schema_failure("choices is empty")
         choice = as_mapping(choices[0], "first choice is not an object")
         finish_reason = optional_string(choice.get("finish_reason"))
+        usage_value = document.get("usage")
+        usage = as_mapping(usage_value, "usage is missing or invalid") if usage_value is not None else {}
+        prompt_details_value = usage.get("prompt_tokens_details")
+        prompt_details = (
+            as_mapping(prompt_details_value, "prompt_tokens_details is invalid")
+            if prompt_details_value is not None
+            else {}
+        )
+        completion_details_value = usage.get("completion_tokens_details")
+        completion_details = (
+            as_mapping(completion_details_value, "completion_tokens_details is invalid")
+            if completion_details_value is not None
+            else {}
+        )
+        token_usage = TokenUsage(
+            optional_token(usage.get("prompt_tokens"), "prompt_tokens is invalid"),
+            optional_token(usage.get("completion_tokens"), "completion_tokens is invalid"),
+            f"{self.name}_reported_usage",
+            reasoning_tokens=optional_token(
+                completion_details.get("reasoning_tokens"), "reasoning_tokens is invalid"
+            ),
+            cached_input_tokens=optional_token(
+                prompt_details.get("cached_tokens"), "cached_tokens is invalid"
+            ),
+        )
         if finish_reason in {"length", "max_tokens"}:
             raise ClassifiedFailure(
                 "configuration/output_cap_truncation",
                 "provider stopped at the configured output cap",
                 http_status=response.status,
+                finish_reason=finish_reason,
+                latency_ms=latency_ms,
+                response_id=optional_string(document.get("id")),
+                input_tokens=token_usage.input_tokens,
+                output_tokens=token_usage.output_tokens,
+                reasoning_tokens=token_usage.reasoning_tokens,
+                cached_input_tokens=token_usage.cached_input_tokens,
+                total_tokens=token_usage.total_tokens,
+                token_accounting_method=token_usage.accounting_method,
+                safe_response_headers=response.headers,
             )
         if finish_reason in {"content_filter", "safety"}:
             raise ClassifiedFailure(
@@ -82,37 +121,15 @@ class OpenAICompatibleChatAdapter:
                 http_status=response.status,
             )
         text = chat_content_text(message.get("content"))
-        usage_value = document.get("usage")
-        usage = as_mapping(usage_value, "usage is missing or invalid") if usage_value is not None else {}
-        prompt_details_value = usage.get("prompt_tokens_details")
-        prompt_details = (
-            as_mapping(prompt_details_value, "prompt_tokens_details is invalid")
-            if prompt_details_value is not None
-            else {}
-        )
-        completion_details_value = usage.get("completion_tokens_details")
-        completion_details = (
-            as_mapping(completion_details_value, "completion_tokens_details is invalid")
-            if completion_details_value is not None
-            else {}
-        )
         return ProviderResponse(
             provider=self.name,
             requested_model_id=request.model_id,
             reported_model_id=optional_string(document.get("model")),
             text=text,
-            usage=TokenUsage(
-                optional_token(usage.get("prompt_tokens"), "prompt_tokens is invalid"),
-                optional_token(usage.get("completion_tokens"), "completion_tokens is invalid"),
-                f"{self.name}_reported_usage",
-                reasoning_tokens=optional_token(
-                    completion_details.get("reasoning_tokens"), "reasoning_tokens is invalid"
-                ),
-                cached_input_tokens=optional_token(
-                    prompt_details.get("cached_tokens"), "cached_tokens is invalid"
-                ),
-            ),
+            usage=token_usage,
             latency_ms=latency_ms,
             response_id=optional_string(document.get("id")),
             http_status=response.status,
+            finish_reason=finish_reason,
+            safe_response_headers=response.headers,
         )

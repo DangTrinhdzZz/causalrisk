@@ -2,9 +2,14 @@
 
 **Decision date:** 2026-09-12
 
-**Status:** configuration execution enabled; live canary pending separate authorization
+**Status:** superseded by Amendment 005 after the terminal R1 canary failure
 
 **Applies to:** the sealed CLadder smoke split only
+
+The R1 plan governed by this amendment is historical. Its failed artifact is
+frozen as `cladder-smoke-canary-3`; it must not be resumed or overwritten and
+does not satisfy any later canary gate. Amendment 005 defines the separate R2
+revision and run IDs. Amendment 003 remains in force.
 
 ## 1. Decision
 

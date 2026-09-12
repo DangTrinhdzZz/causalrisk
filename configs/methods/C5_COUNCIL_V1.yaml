@@ -26,16 +26,16 @@ prompt_sha256: 1a9db03951bfd6b969a67f198310309dc24c81b6a7cc8c3f397dec1ef6b856fb
 roles: [analyst, semantic_query_critic, graph_identification_critic, formal_numerical_critic, adjudicator]
 temperature: 0.0
 max_output_tokens:
-  analyst: 768
+  analyst: 2048
   semantic_query_critic: 1024
   graph_identification_critic: 1024
   formal_numerical_critic: 1024
   adjudicator: 768
 seed: null
 retry_policy_ref: docs/retry_policy.md
-retry_policy_sha256: c7cac21961a5ef78505d70655c4df87352233fc11974426ff92f55ac0a6659f7
+retry_policy_sha256: 78c859c8910c2f3c1179859bf8c64cab2b6a70483a53ee75dfdf2c619e893797
 parser_version: yesno_parser_v1
-logging_version: step9_logging_v1
+logging_version: cross_split_logging_v2
 allow_retrieval: false
 allow_web: false
 expose_gold_label: false
@@ -47,4 +47,4 @@ allow_symbolic_unpriced_provider:
   source_url: https://build.nvidia.com/nvidia/nemotron-3.5-lightning-30b-a3b
   effective_date: "2026-09-11"
   reason: NVIDIA publishes a free prototype endpoint but no comparable official token list price.
-notes: Enabled only for controlled smoke execution under Amendments 003 and 004.
+notes: R2 mechanics apply cross-split; NVIDIA pricing remains governed by Amendment 003.

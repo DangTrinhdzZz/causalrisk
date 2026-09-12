@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "version": "provider_limits_2026-09-12",
+  "effective_at": "2026-09-12T00:00:00+07:00",
+  "scope": "account_specific_limits_not_public_defaults",
+  "providers": {
+    "groq": {"source": "account dashboard value not captured", "RPM": null, "TPM": null, "RPD": null, "TPD": null},
+    "nvidia_nim": {"source": "account dashboard value not captured", "RPM": null, "TPM": null, "RPD": null, "TPD": null},
+    "gemini": {"source": "account dashboard value not captured", "RPM": null, "TPM": null, "RPD": null, "TPD": null},
+    "cloudflare_workers_ai": {"source": "account dashboard value not captured", "RPM": null, "TPM": null, "RPD": null, "TPD": null},
+    "openai": {"source": "account dashboard value not captured", "RPM": null, "TPM": null, "RPD": null, "TPD": null}
+  },
+  "policy": {
+    "unknown": "null is preserved and is not treated as unlimited or zero",
+    "public_limits": "must not be treated as account truth",
+    "daily_exceedance": "block unless a declared batching/pause plan keeps each account window within the known limit"
+  }
+}

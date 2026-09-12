@@ -173,7 +173,7 @@ def validate_config(document: dict[str, Any], *, for_execution: bool = False) ->
         raise ConfigError("prompt_version is not the frozen Day 2 bundle")
     if document["parser_version"] != "yesno_parser_v1":
         raise ConfigError("parser_version is not supported")
-    if document["logging_version"] != "step9_logging_v1":
+    if document["logging_version"] != "cross_split_logging_v2":
         raise ConfigError("logging_version is not supported")
 
     for field in ("allow_retrieval", "allow_web", "expose_gold_label", "expose_metadata"):

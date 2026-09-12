@@ -44,11 +44,15 @@ class CloudflareWorkersAIAdapter:
         account_path = quote(self.account_id.get_secret_value(), safe="")
         model_path = quote(request.model_id, safe="@/")
         started = perf_counter()
-        response = self.transport.post(
-            f"{CLOUDFLARE_API_ROOT}/{account_path}/ai/run/{model_path}",
-            {"Authorization": f"Bearer {self.credential.get_secret_value()}"},
-            payload,
-        )
+        try:
+            response = self.transport.post(
+                f"{CLOUDFLARE_API_ROOT}/{account_path}/ai/run/{model_path}",
+                {"Authorization": f"Bearer {self.credential.get_secret_value()}"},
+                payload,
+            )
+        except ClassifiedFailure as failure:
+            failure.latency_ms = (perf_counter() - started) * 1000
+            raise
         latency_ms = (perf_counter() - started) * 1000
         envelope = response.document
         if envelope.get("success") is False:
@@ -58,7 +62,6 @@ class CloudflareWorkersAIAdapter:
                 http_status=response.status,
             )
         result = as_mapping(envelope.get("result"), "Cloudflare result is missing or invalid")
-        text = self._result_text(result, http_status=response.status)
         usage_value = result.get("usage")
         usage = as_mapping(usage_value, "Cloudflare usage is invalid") if usage_value is not None else {}
         input_tokens = usage.get("prompt_tokens", usage.get("input_tokens"))
@@ -75,29 +78,65 @@ class CloudflareWorkersAIAdapter:
             if completion_details_value is not None
             else {}
         )
+        token_usage = TokenUsage(
+            optional_token(input_tokens, "Cloudflare input token count is invalid"),
+            optional_token(output_tokens, "Cloudflare output token count is invalid"),
+            "cloudflare_reported_usage_or_null",
+            reasoning_tokens=optional_token(
+                completion_details.get("reasoning_tokens"), "Cloudflare reasoning_tokens is invalid"
+            ),
+            cached_input_tokens=optional_token(
+                prompt_details.get("cached_tokens"), "Cloudflare cached_tokens is invalid"
+            ),
+        )
+        finish_reason = self._finish_reason(result)
+        response_id = optional_string(result.get("id")) or optional_string(envelope.get("result_info"))
+        if finish_reason in {"length", "max_output_tokens", "max_tokens"}:
+            raise ClassifiedFailure(
+                "configuration/output_cap_truncation",
+                "Cloudflare exhausted the output cap",
+                http_status=response.status,
+                finish_reason=finish_reason,
+                latency_ms=latency_ms,
+                response_id=response_id,
+                input_tokens=token_usage.input_tokens,
+                output_tokens=token_usage.output_tokens,
+                reasoning_tokens=token_usage.reasoning_tokens,
+                cached_input_tokens=token_usage.cached_input_tokens,
+                total_tokens=token_usage.total_tokens,
+                token_accounting_method=token_usage.accounting_method,
+                safe_response_headers=response.headers,
+            )
+        text = self._result_text(result)
         return ProviderResponse(
             provider=self.name,
             requested_model_id=request.model_id,
             reported_model_id=optional_string(result.get("model")),
             text=text,
-            usage=TokenUsage(
-                optional_token(input_tokens, "Cloudflare input token count is invalid"),
-                optional_token(output_tokens, "Cloudflare output token count is invalid"),
-                "cloudflare_reported_usage_or_null",
-                reasoning_tokens=optional_token(
-                    completion_details.get("reasoning_tokens"), "Cloudflare reasoning_tokens is invalid"
-                ),
-                cached_input_tokens=optional_token(
-                    prompt_details.get("cached_tokens"), "Cloudflare cached_tokens is invalid"
-                ),
-            ),
+            usage=token_usage,
             latency_ms=latency_ms,
-            response_id=optional_string(result.get("id")) or optional_string(envelope.get("result_info")),
+            response_id=response_id,
             http_status=response.status,
+            finish_reason=finish_reason,
+            safe_response_headers=response.headers,
         )
 
     @staticmethod
-    def _result_text(result: dict[str, Any], *, http_status: int) -> str:
+    def _finish_reason(result: dict[str, Any]) -> str | None:
+        direct = optional_string(result.get("finish_reason"))
+        if direct is not None:
+            return direct
+        choices_value = result.get("choices")
+        if choices_value is None:
+            return None
+        choices = as_sequence(choices_value, "Cloudflare choices is invalid")
+        if not choices:
+            return None
+        choice = as_mapping(choices[0], "first Cloudflare choice is not an object")
+        return optional_string(choice.get("finish_reason"))
+
+    @staticmethod
+    def _result_text(result: dict[str, Any]) -> str:
         direct = result.get("response")
         if isinstance(direct, str):
             return direct
@@ -108,16 +147,5 @@ class CloudflareWorkersAIAdapter:
                 choice = as_mapping(choices[0], "first Cloudflare choice is not an object")
                 message = as_mapping(choice.get("message"), "Cloudflare choice message is missing")
                 content = message.get("content")
-                finish_reason = choice.get("finish_reason")
-                if content is None and finish_reason in {
-                    "length",
-                    "max_output_tokens",
-                    "max_tokens",
-                }:
-                    raise ClassifiedFailure(
-                        "configuration/output_cap_truncation",
-                        "Cloudflare exhausted the output cap before emitting final content",
-                        http_status=http_status,
-                    )
                 return chat_content_text(content)
         raise schema_failure("Cloudflare result contains no response text")

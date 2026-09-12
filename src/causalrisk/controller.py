@@ -1,17 +1,19 @@
-"""Public surface for the controlled smoke-only execution controller."""
+"""Public surface for Amendment 005 cross-split execution."""
 
-from causalrisk.controlled_execution import (
-    ControllerLimits,
+from causalrisk.execution import (
+    ExecutionLineage,
     PacingPolicy,
-    canary_artifact_passed,
-    execute_smoke,
+    execute_split,
     logical_call_id,
+    predecessor_gate_for_policy,
+    r2_canary_artifact_passed,
 )
 
 __all__ = [
-    "ControllerLimits",
+    "ExecutionLineage",
     "PacingPolicy",
-    "canary_artifact_passed",
-    "execute_smoke",
+    "execute_split",
     "logical_call_id",
+    "predecessor_gate_for_policy",
+    "r2_canary_artifact_passed",
 ]

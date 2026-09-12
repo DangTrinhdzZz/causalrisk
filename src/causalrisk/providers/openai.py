@@ -42,15 +42,17 @@ class OpenAIResponsesAdapter:
             "store": False,
         }
         started = perf_counter()
-        response = self.transport.post(
-            OPENAI_RESPONSES_ENDPOINT,
-            {"Authorization": f"Bearer {self.credential.get_secret_value()}"},
-            payload,
-        )
+        try:
+            response = self.transport.post(
+                OPENAI_RESPONSES_ENDPOINT,
+                {"Authorization": f"Bearer {self.credential.get_secret_value()}"},
+                payload,
+            )
+        except ClassifiedFailure as failure:
+            failure.latency_ms = (perf_counter() - started) * 1000
+            raise
         latency_ms = (perf_counter() - started) * 1000
         document = response.document
-        self._check_terminal_status(document, response.status)
-        text = self._output_text(document, response.status)
         usage_value = document.get("usage")
         usage = as_mapping(usage_value, "usage is missing or invalid") if usage_value is not None else {}
         input_details_value = usage.get("input_tokens_details")
@@ -65,29 +67,50 @@ class OpenAIResponsesAdapter:
             if output_details_value is not None
             else {}
         )
+        token_usage = TokenUsage(
+            optional_token(usage.get("input_tokens"), "input_tokens is invalid"),
+            optional_token(usage.get("output_tokens"), "output_tokens is invalid"),
+            "openai_responses_reported_usage",
+            reasoning_tokens=optional_token(
+                output_details.get("reasoning_tokens"), "reasoning_tokens is invalid"
+            ),
+            cached_input_tokens=optional_token(
+                input_details.get("cached_tokens"), "cached_tokens is invalid"
+            ),
+        )
+        response_id = optional_string(document.get("id"))
+        finish_reason = self._check_terminal_status(
+            document,
+            response.status,
+            usage=token_usage,
+            latency_ms=latency_ms,
+            response_id=response_id,
+            safe_response_headers=response.headers,
+        )
+        text = self._output_text(document, response.status)
         return ProviderResponse(
             provider=self.name,
             requested_model_id=request.model_id,
             reported_model_id=optional_string(document.get("model")),
             text=text,
-            usage=TokenUsage(
-                optional_token(usage.get("input_tokens"), "input_tokens is invalid"),
-                optional_token(usage.get("output_tokens"), "output_tokens is invalid"),
-                "openai_responses_reported_usage",
-                reasoning_tokens=optional_token(
-                    output_details.get("reasoning_tokens"), "reasoning_tokens is invalid"
-                ),
-                cached_input_tokens=optional_token(
-                    input_details.get("cached_tokens"), "cached_tokens is invalid"
-                ),
-            ),
+            usage=token_usage,
             latency_ms=latency_ms,
-            response_id=optional_string(document.get("id")),
+            response_id=response_id,
             http_status=response.status,
+            finish_reason=finish_reason,
+            safe_response_headers=response.headers,
         )
 
     @staticmethod
-    def _check_terminal_status(document: dict[str, Any], http_status: int) -> None:
+    def _check_terminal_status(
+        document: dict[str, Any],
+        http_status: int,
+        *,
+        usage: TokenUsage,
+        latency_ms: float,
+        response_id: str | None,
+        safe_response_headers: dict[str, str],
+    ) -> str | None:
         status = optional_string(document.get("status"))
         if status == "incomplete":
             details_value = document.get("incomplete_details")
@@ -98,10 +121,21 @@ class OpenAIResponsesAdapter:
                     "configuration/output_cap_truncation",
                     "OpenAI response stopped at the configured output cap",
                     http_status=http_status,
+                    finish_reason=reason,
+                    latency_ms=latency_ms,
+                    response_id=response_id,
+                    input_tokens=usage.input_tokens,
+                    output_tokens=usage.output_tokens,
+                    reasoning_tokens=usage.reasoning_tokens,
+                    cached_input_tokens=usage.cached_input_tokens,
+                    total_tokens=usage.total_tokens,
+                    token_accounting_method=usage.accounting_method,
+                    safe_response_headers=safe_response_headers,
                 )
             raise schema_failure("OpenAI response is incomplete for an unknown reason")
         if status not in {None, "completed"}:
             raise schema_failure("OpenAI response has an unexpected terminal status")
+        return status
 
     @staticmethod
     def _output_text(document: dict[str, Any], http_status: int) -> str:

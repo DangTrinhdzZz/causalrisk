@@ -12,6 +12,7 @@ from causalrisk.providers.http import (
     StdlibJsonHttpTransport,
     classify_http_status,
     extract_provider_error_metadata,
+    safe_rate_limit_headers,
 )
 from causalrisk.providers.openai import OpenAIResponsesAdapter
 from causalrisk.providers.openai_compatible import OpenAICompatibleChatAdapter
@@ -105,13 +106,23 @@ def test_openai_responses_adapter_extracts_text_usage_and_never_stores_response(
 def test_openai_responses_adapter_classifies_output_cap_and_refusal():
     truncated = FakeTransport(
         {
+            "id": "truncated-openai",
             "status": "incomplete",
             "incomplete_details": {"reason": "max_output_tokens"},
+            "usage": {
+                "input_tokens": 7,
+                "output_tokens": 8,
+                "input_tokens_details": {"cached_tokens": 0},
+                "output_tokens_details": {"reasoning_tokens": 2},
+            },
         }
     )
     with pytest.raises(ClassifiedFailure) as cap_error:
         OpenAIResponsesAdapter(SecretValue("fake"), truncated).complete(request())
     assert cap_error.value.failure_code == "configuration/output_cap_truncation"
+    assert cap_error.value.finish_reason == "max_output_tokens"
+    assert cap_error.value.output_tokens == 8
+    assert cap_error.value.response_id == "truncated-openai"
 
     refused = FakeTransport(
         {
@@ -153,6 +164,7 @@ def test_openai_compatible_adapter_uses_declared_provider_fields():
     assert response.usage.total_tokens == 7
     assert response.usage.cached_input_tokens == 1
     assert response.usage.reasoning_tokens == 1
+    assert response.finish_reason == "stop"
     _, _, payload = transport.calls[0]
     assert payload["max_completion_tokens"] == 8
     assert payload["seed"] == 17
@@ -183,6 +195,7 @@ def test_gemini_adapter_extracts_generate_content_shape():
     assert response.usage.total_tokens == 7
     assert response.usage.reasoning_tokens == 2
     assert response.usage.cached_input_tokens == 1
+    assert response.finish_reason == "STOP"
     url, headers, payload = transport.calls[0]
     assert url.endswith("/gemini-test:generateContent")
     assert headers["x-goog-api-key"] == "fake-gemini"
@@ -220,7 +233,7 @@ def test_cloudflare_adapter_never_treats_reasoning_as_final_content():
                     {
                         "finish_reason": "length",
                         "message": {
-                            "content": None,
+                            "content": "YES",
                             "reasoning_content": "This hidden reasoning is not a final answer.",
                         },
                     }
@@ -240,6 +253,51 @@ def test_cloudflare_adapter_never_treats_reasoning_as_final_content():
 
     assert error.value.failure_code == "configuration/output_cap_truncation"
     assert error.value.http_status == 200
+    assert error.value.finish_reason == "length"
+    assert error.value.input_tokens == 6
+    assert error.value.output_tokens == 8
+
+
+def test_openai_compatible_truncation_keeps_safe_usage_and_rejects_parseable_yes():
+    transport = FakeTransport(
+        {
+            "id": "truncated-chat",
+            "model": "requested-model",
+            "choices": [{"message": {"content": "YES"}, "finish_reason": "length"}],
+            "usage": {
+                "prompt_tokens": 9,
+                "completion_tokens": 8,
+                "prompt_tokens_details": {"cached_tokens": 0},
+                "completion_tokens_details": {"reasoning_tokens": 3},
+            },
+        }
+    )
+    adapter = OpenAICompatibleChatAdapter(
+        "groq",
+        "GROQ_API_KEY",
+        SecretValue("fake-groq"),
+        "https://example.invalid/chat",
+        transport=transport,
+    )
+    with pytest.raises(ClassifiedFailure) as error:
+        adapter.complete(request("requested-model"))
+    assert error.value.failure_code == "configuration/output_cap_truncation"
+    assert error.value.finish_reason == "length"
+    assert error.value.input_tokens == 9
+    assert error.value.output_tokens == 8
+    assert error.value.response_id == "truncated-chat"
+
+
+def test_safe_rate_limit_header_filter_never_keeps_raw_authorization_or_cookie():
+    assert safe_rate_limit_headers(
+        {
+            "Retry-After": "5",
+            "X-RateLimit-Remaining-Requests": "12",
+            "Authorization": "Bearer never-retain",
+            "Cookie": "never-retain",
+            "X-Unrelated": "never-retain",
+        }
+    ) == {"retry-after": "5", "x-ratelimit-remaining-requests": "12"}
 
 
 @pytest.mark.parametrize(
@@ -283,6 +341,18 @@ def test_provider_error_metadata_keeps_only_allowlisted_non_message_fields():
 def test_provider_error_metadata_rejects_secret_like_or_unstructured_values():
     raw = b'{"error":{"code":"sk-this-must-not-be-retained","type":"bad value with spaces"}}'
     assert extract_provider_error_metadata(raw) == (None, None, None)
+
+
+def test_only_safe_rate_limit_headers_are_retained():
+    assert safe_rate_limit_headers(
+        {
+            "Retry-After": "5",
+            "X-RateLimit-Remaining-Requests": "99",
+            "Authorization": "Bearer must-not-survive",
+            "Set-Cookie": "session=must-not-survive",
+            "X-Unrecognized": "must-not-survive",
+        }
+    ) == {"retry-after": "5", "x-ratelimit-remaining-requests": "99"}
 
 
 def test_model_not_found_and_quota_codes_override_ambiguous_http_statuses():

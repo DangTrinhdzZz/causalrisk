@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "report_kind": "label_free_operational_forensic_aggregate",
+  "run_id": "cladder-smoke-canary-3",
+  "benchmark_result": false,
+  "correctness_analyzed": false,
+  "raw_prompt_included": false,
+  "raw_output_included": false,
+  "item_membership_included": false,
+  "artifact_integrity": {
+    "file_count": 80,
+    "artifact_tree_sha256": "ef651c3cbda820bb39d67188f5532321206544b2fe68594542730b115959b69a",
+    "manifest_sha256": "1b41a9e78f999f873084ab828cecdc385e4ce54028c4f5f04e53ea6045040637",
+    "summary_sha256": "ab2fd2a8f1111c94fe783a14dc115be81f75dc932f49db9cf83fa7da1a8f6f3d",
+    "freeze_state": "frozen",
+    "run_status": "failed",
+    "ambiguous_in_flight_attempts": 0,
+    "secret_or_authorization_keys": 0
+  },
+  "completion": {
+    "expected_logical_calls": 51,
+    "successful_logical_calls": 27,
+    "terminal_failure_calls": 1,
+    "transport_attempts": 44,
+    "http_429_attempts": 16
+  },
+  "terminal_failure": {
+    "config_id": "C3_COUNCIL_V1",
+    "role": "analyst",
+    "provider": "groq",
+    "model_id": "openai/gpt-oss-120b",
+    "configured_max_output_tokens": 768,
+    "failure_type": "configuration/output_cap_truncation",
+    "finish_reason": null,
+    "finish_reason_note": "R1 classified length/max_tokens terminally but did not persist the exact provider finish reason",
+    "input_tokens": null,
+    "output_tokens": null,
+    "reasoning_tokens": null,
+    "cached_input_tokens": null,
+    "attempt_chain": [
+      {"attempt_index": 0, "status": "failure", "failure_code": "provider/http_429", "http_status": 429, "duration_ms_from_timestamps": 274.860},
+      {"attempt_index": 1, "status": "failure", "failure_code": "configuration/output_cap_truncation", "http_status": 200, "duration_ms_from_timestamps": 2556.946}
+    ]
+  },
+  "provider_aggregates": {
+    "groq": {
+      "successful_calls": 27,
+      "terminal_failure_calls": 1,
+      "transport_attempts": 44,
+      "retry_attempts": 16,
+      "attempt_failure_codes": {"provider/http_429": 16, "configuration/output_cap_truncation": 1},
+      "tokens": {
+        "input": {"sum": 10197, "reported_calls": 27, "missing_calls": 0},
+        "output": {"sum": 13826, "reported_calls": 27, "missing_calls": 0},
+        "reasoning": {"sum": 10255, "reported_calls": 27, "missing_calls": 0},
+        "cached_input": {"sum": 512, "reported_calls": 2, "missing_calls": 25}
+      },
+      "successful_call_latency_ms": {"mean": 1933.733, "min": 1289.569, "max": 3130.189},
+      "attempt_duration_ms_from_timestamps": {"mean": 1369.955, "min": 224.248, "max": 3131.512},
+      "retry_after_or_policy_backoff_seconds_observed": {"2.0": 3, "3.0": 6, "4.0": 3, "5.0": 2, "6.0": 1},
+      "retry_after_coverage_note": "15 successful-call retry histories retained backoff; the terminal call omitted its retry event in R1"
+    },
+    "nvidia_nim": null,
+    "gemini": null,
+    "cloudflare_workers_ai": null,
+    "openai": null
+  },
+  "cost": {
+    "r1_recorded_normalized_list_cost_usd": "0.00978675",
+    "actual_charge_usd": null,
+    "actual_charge_reporting_coverage": 0.0,
+    "coverage_note": "Only successful Groq calls had normalized costs; failed-attempt usage and actual charges were unavailable. Null is not zero."
+  }
+}

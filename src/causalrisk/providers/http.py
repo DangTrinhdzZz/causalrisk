@@ -18,6 +18,21 @@ MAX_RESPONSE_BYTES = 10_000_000
 MAX_ERROR_RESPONSE_BYTES = 131_072
 SAFE_PROVIDER_ERROR_FIELD = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$")
 DEFAULT_USER_AGENT = "causalrisk-provider-client/1.0"
+SAFE_RATE_LIMIT_HEADERS = frozenset(
+    {
+        "retry-after",
+        "ratelimit-limit",
+        "ratelimit-remaining",
+        "ratelimit-reset",
+        "x-ratelimit-limit-requests",
+        "x-ratelimit-limit-tokens",
+        "x-ratelimit-remaining-requests",
+        "x-ratelimit-remaining-tokens",
+        "x-ratelimit-reset-requests",
+        "x-ratelimit-reset-tokens",
+    }
+)
+SAFE_HEADER_VALUE = re.compile(r"^[A-Za-z0-9 .,:+/_-]{1,256}$")
 
 
 @dataclass(frozen=True, slots=True)
@@ -61,6 +76,20 @@ def _safe_provider_error_field(value: Any) -> str | None:
     return value
 
 
+def safe_rate_limit_headers(headers: Any) -> dict[str, str]:
+    """Return only short, structured rate-limit headers; never a raw header map."""
+
+    if headers is None or not hasattr(headers, "items"):
+        return {}
+    safe: dict[str, str] = {}
+    for key, value in headers.items():
+        normalized_key = str(key).casefold()
+        normalized_value = str(value)
+        if normalized_key in SAFE_RATE_LIMIT_HEADERS and SAFE_HEADER_VALUE.fullmatch(normalized_value):
+            safe[normalized_key] = normalized_value
+    return safe
+
+
 def extract_provider_error_metadata(raw: bytes) -> tuple[str | None, str | None, str | None]:
     """Extract only code/type/param fields; never retain a provider message."""
 
@@ -92,6 +121,7 @@ def classify_http_status(
     provider_error_code: str | None = None,
     provider_error_type: str | None = None,
     provider_error_param: str | None = None,
+    safe_response_headers: dict[str, str] | None = None,
 ) -> ClassifiedFailure:
     """Map a provider HTTP status to the frozen failure taxonomy."""
 
@@ -124,6 +154,7 @@ def classify_http_status(
         provider_error_code=provider_error_code,
         provider_error_type=provider_error_type,
         provider_error_param=provider_error_param,
+        safe_response_headers=safe_response_headers,
     )
 
 
@@ -151,6 +182,7 @@ class StdlibJsonHttpTransport:
                 return self._decode_response(response)
         except HTTPError as error:
             retry_after = error.headers.get("Retry-After") if error.headers is not None else None
+            safe_headers = safe_rate_limit_headers(error.headers)
             status = error.code
             error_metadata = extract_provider_error_metadata(error.read(MAX_ERROR_RESPONSE_BYTES + 1))
             error.close()
@@ -160,6 +192,7 @@ class StdlibJsonHttpTransport:
                 provider_error_code=error_metadata[0],
                 provider_error_type=error_metadata[1],
                 provider_error_param=error_metadata[2],
+                safe_response_headers=safe_headers,
             ) from None
         except TimeoutError:
             raise ClassifiedFailure("transport/timeout", "provider request timed out") from None
@@ -179,6 +212,6 @@ class StdlibJsonHttpTransport:
             raise ClassifiedFailure("response/schema_failure", "provider JSON root is not an object")
         return JsonHttpResponse(
             status=int(response.status),
-            headers={str(key).lower(): str(value) for key, value in response.headers.items()},
+            headers=safe_rate_limit_headers(response.headers),
             document=document,
         )

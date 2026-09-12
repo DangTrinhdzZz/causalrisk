@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 from causalrisk.config import MethodConfig, load_config
-from causalrisk.controller import (
+from causalrisk.controlled_execution import (
     ControllerLimits,
     PacingPolicy,
     canary_artifact_passed,
@@ -111,7 +111,7 @@ def invoke(adapter, tmp_path, **changes):
         "authorized": True,
         "run_id": "test-smoke-run",
         "configs": (enabled_a1(),),
-        "items": (LabelFreeItem("item-1", 1, "background", "given", "question"),),
+        "items": (LabelFreeItem("item-1", "background", "given", "question"),),
         "adapters": {"groq": adapter},
         "pricing": complete_pricing(),
         "prompt_bundle": PROMPT_BUNDLE,
@@ -151,7 +151,7 @@ def test_model_prompt_omits_item_id_and_rung(tmp_path):
     invoke(
         adapter,
         tmp_path,
-        items=(LabelFreeItem("opaque-item-id", 3, "background-safe", "given-safe", "question-safe"),),
+        items=(LabelFreeItem("opaque-item-id", "background-safe", "given-safe", "question-safe"),),
     )
     prompt = adapter.requests[0].prompt
     assert "opaque-item-id" not in prompt
@@ -161,11 +161,13 @@ def test_model_prompt_omits_item_id_and_rung(tmp_path):
 
 def test_resume_skips_a_completed_call(tmp_path):
     adapter = FakeAdapter()
-    call_id = logical_call_id("smoke", "A1_SINGLE_V1", "item-1", 0)
     from causalrisk.controlled_execution import _atomic_create_json, _prepare_run
+    from causalrisk.controlled_execution import logical_call_id as legacy_logical_call_id
+
+    call_id = legacy_logical_call_id("smoke", "A1_SINGLE_V1", "item-1", 0)
 
     config = enabled_a1()
-    items = (LabelFreeItem("item-1", 1, "background", "given", "question"),)
+    items = (LabelFreeItem("item-1", "background", "given", "question"),)
     limits = ControllerLimits(1, 4, 0)
     run_dir, _manifest = _prepare_run(
         tmp_path,
@@ -289,7 +291,7 @@ def test_ambiguous_in_flight_attempt_blocks_resume_without_call(tmp_path):
 
     adapter = FakeAdapter()
     config = enabled_a1()
-    items = (LabelFreeItem("item-1", 1, "background", "given", "question"),)
+    items = (LabelFreeItem("item-1", "background", "given", "question"),)
     run_dir, _manifest = _prepare_run(
         tmp_path,
         "test-smoke-run",
@@ -322,7 +324,7 @@ def test_canary_pass_requires_frozen_complete_zero_error_summary(tmp_path):
         authorized=True,
         run_id="cladder-smoke-canary-3",
         configs=configs,
-        items=tuple(LabelFreeItem(f"item-{rung}", rung, "background", "given", "question") for rung in (1, 2, 3)),
+        items=tuple(LabelFreeItem(f"item-{index}", "background", "given", "question") for index in (1, 2, 3)),
         adapters=adapters,
         pricing=load_pricing(ROOT / "configs/pricing_2026-09-11.json"),
         prompt_bundle=PROMPT_BUNDLE,

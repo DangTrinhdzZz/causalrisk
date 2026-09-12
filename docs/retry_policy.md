@@ -16,6 +16,18 @@ The fixed retry budget is `max_retries = 3`. Thus, an item may receive one initi
 
 For eligible failures, the wrapper waits 1 second before the first retry, 2 seconds before the second retry, and 4 seconds before the third retry. For HTTP 429 responses, it must respect a provider-supplied `Retry-After` value when present. The applied delay must be logged. No attempt beyond the fourth call is permitted.
 
+Amendment 005 additionally requires a provider-start pacing policy that applies
+identically to smoke, calibration, and locked-test execution. Groq starts are
+separated by at least 10.0 seconds. Pacing is applied before every initial or
+retry attempt and does not enlarge the retry budget. A 429 remains an
+exceptional retry-eligible failure, not a normal scheduling mechanism.
+
+Account limits are loaded from a versioned local-safe snapshot with nullable
+RPM, TPM, RPD, and TPD values. Publicly advertised limits are not treated as
+account truth. Known projected daily exceedance blocks execution unless an
+item-bounded batching/pause plan fits the known account window; unknown limits
+remain explicit warnings rather than being interpreted as unlimited or zero.
+
 ## 3. Failure taxonomy and decision table
 
 Failures are classified before any retry decision. The following table is normative.
@@ -39,6 +51,11 @@ Failures are classified before any retry decision. The following table is normat
 | Suspected wrong answer, low confidence, agent disagreement, invalid causal reasoning, or semantic contradiction | semantic or protocol | No | Record the applicable terminal failure; never seek a replacement answer. |
 
 Only the five explicitly eligible classes may consume the retry budget. An eligible failure that persists through all four attempts results in `method_failure` for the item. Ineligible failures must not generate another LLM call.
+
+Provider finish reasons `length`, `max_tokens`, `max_output_tokens`, or their
+documented provider-native equivalent are always terminal output-cap
+truncation. A truncated response is never accepted, even when its partial text
+contains an otherwise parseable `YES` or `NO`.
 
 ## 4. Output-format and schema handling
 
@@ -107,6 +124,12 @@ The event log must contain one record for every actual provider call, including 
 | `final_status` | Terminal item or run status when known, including success, `method_failure`, `data_validation_failure`, or run-blocking failure. |
 
 Null values must distinguish genuinely unavailable fields from zero-valued measurements. The log should additionally retain timestamps, the effective `Retry-After` value, normalization actions, provider error identifiers, and computed monetary cost when available.
+
+Only explicitly allowlisted rate-limit response fields may be retained. Raw
+header maps, Authorization, cookies, credentials, and provider error bodies
+must never be written. Output-cap failures retain the safe finish reason,
+latency, HTTP status, response ID, and provider-reported token fields when
+available. Terminal call records retain the complete retry/backoff history.
 
 ## 9. Operational metrics
 

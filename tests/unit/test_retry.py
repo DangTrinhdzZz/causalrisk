@@ -26,6 +26,29 @@ def test_retry_after_is_respected_for_http_429():
     assert decide_retry(failure, 0).backoff_seconds == 2.5
 
 
+def test_retry_event_keeps_safe_observability_without_raw_headers():
+    events = []
+
+    def operation(_attempt_index):
+        raise ClassifiedFailure(
+            "configuration/output_cap_truncation",
+            "truncated",
+            http_status=200,
+            finish_reason="length",
+            latency_ms=3.0,
+            input_tokens=4,
+            output_tokens=8,
+            safe_response_headers={"x-ratelimit-remaining-requests": "1"},
+        )
+
+    with pytest.raises(ClassifiedFailure):
+        call_with_retries(operation, on_retry_event=events.append, sleep=lambda _seconds: None)
+    assert len(events) == 1
+    assert events[0].finish_reason == "length"
+    assert events[0].latency_ms == 3.0
+    assert events[0].safe_response_headers == {"x-ratelimit-remaining-requests": "1"}
+
+
 def test_invalid_label_is_not_retried():
     calls = []
 

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Protocol, runtime_checkable
 
 from causalrisk.usage import TokenUsage
@@ -37,6 +37,7 @@ class ProviderResponse:
     http_status: int | None = None
     finish_reason: str | None = None
     actual_charge_usd: float | None = None
+    safe_response_headers: dict[str, str] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         if not self.provider.strip() or not self.requested_model_id.strip():
@@ -51,6 +52,10 @@ class ProviderResponse:
             or self.actual_charge_usd < 0
         ):
             raise ValueError("actual_charge_usd must be non-negative or null")
+        if not all(
+            isinstance(key, str) and isinstance(value, str) for key, value in self.safe_response_headers.items()
+        ):
+            raise ValueError("safe_response_headers must be a string mapping")
 
 
 @runtime_checkable

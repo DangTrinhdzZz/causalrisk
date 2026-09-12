@@ -15,16 +15,16 @@ prompt_sha256: 1a9db03951bfd6b969a67f198310309dc24c81b6a7cc8c3f397dec1ef6b856fb
 roles: [analyst]
 temperature: 0.0
 max_output_tokens:
-  analyst: 768
+  analyst: 2048
 seed: null
 retry_policy_ref: docs/retry_policy.md
-retry_policy_sha256: c7cac21961a5ef78505d70655c4df87352233fc11974426ff92f55ac0a6659f7
+retry_policy_sha256: 78c859c8910c2f3c1179859bf8c64cab2b6a70483a53ee75dfdf2c619e893797
 parser_version: yesno_parser_v1
-logging_version: step9_logging_v1
+logging_version: cross_split_logging_v2
 allow_retrieval: false
 allow_web: false
 expose_gold_label: false
 expose_metadata: false
 runtime_verified: true
 execution_enabled: true
-notes: Enabled smoke-only alias; it resolves to A1 and schedules no additional call.
+notes: Exact A1 behavior mirror for validation; the alias schedules no additional call on any split.
