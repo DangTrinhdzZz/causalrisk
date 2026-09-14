@@ -1,10 +1,10 @@
-"""Frozen cross-split execution policies for Amendment 006 revision R3."""
+"""Frozen cross-split execution policies for Amendment 007 revision R4."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 
-EXECUTION_REVISION = "cross_split_execution_r3"
+EXECUTION_REVISION = "cross_split_execution_r4"
 PROVIDER_LIMIT_SNAPSHOT_VERSION = "provider_limits_2026-09-12"
 VIEW_SCHEMA_VERSION = 2
 CALLS_PER_ITEM = 17
@@ -46,6 +46,9 @@ R1_ARTIFACT_TREE_SHA256 = "ef651c3cbda820bb39d67188f5532321206544b2fe68594542730
 R2_RUN_ID = "cladder-smoke-canary-3-r2"
 R2_MANIFEST_SHA256 = "c8b78f1ef5f853e0443cb88a6d9d596446f1490d288cdd3c5a085b035744b4ce"
 R2_ARTIFACT_TREE_SHA256 = "53aa427f2941b106018bf818971985d665a7c59ee94a185277b2ddf01943422d"
+R3_RUN_ID = "cladder-smoke-canary-3-r3"
+R3_MANIFEST_SHA256 = "72db02ebc08a657911928ef60812da57ef3c493b2f3e0143de02ec3557df8f3e"
+R3_ARTIFACT_TREE_SHA256 = "0dccb0852643e0522b1dcd3ecc1113a5170273d97a7e963923e89c80eb08cd04"
 
 
 @dataclass(frozen=True, slots=True)
@@ -82,11 +85,11 @@ class SplitExecutionPolicy:
 SMOKE_CANARY_POLICY = SplitExecutionPolicy(
     split="smoke",
     item_count=3,
-    run_id="cladder-smoke-canary-3-r3",
+    run_id="cladder-smoke-canary-3-r4",
     authorization_flag="--authorize-live-smoke",
     live_authorized=True,
-    predecessor_run_id=R2_RUN_ID,
-    predecessor_requirement="frozen_failed_r2_remediation_input",
+    predecessor_run_id=R3_RUN_ID,
+    predecessor_requirement="frozen_failed_r3_remediation_input",
     recommended_max_new_items=None,
     canary=True,
 )
@@ -95,7 +98,7 @@ SPLIT_POLICIES = {
     "smoke": SplitExecutionPolicy(
         split="smoke",
         item_count=60,
-        run_id="cladder-smoke-60-r3",
+        run_id="cladder-smoke-60-r4",
         authorization_flag="--authorize-live-smoke",
         live_authorized=True,
         predecessor_run_id=SMOKE_CANARY_POLICY.run_id,
@@ -105,20 +108,20 @@ SPLIT_POLICIES = {
     "calibration": SplitExecutionPolicy(
         split="calibration",
         item_count=300,
-        run_id="cladder-calibration-300-r3",
+        run_id="cladder-calibration-300-r4",
         authorization_flag="--authorize-live-calibration",
         live_authorized=False,
-        predecessor_run_id="cladder-smoke-60-r3",
+        predecessor_run_id="cladder-smoke-60-r4",
         predecessor_requirement="frozen_complete_smoke_operational_review",
         recommended_max_new_items=3,
     ),
     "locked_test": SplitExecutionPolicy(
         split="locked_test",
         item_count=600,
-        run_id="cladder-locked-test-600-r3",
+        run_id="cladder-locked-test-600-r4",
         authorization_flag="--authorize-live-locked-test",
         live_authorized=False,
-        predecessor_run_id="cladder-calibration-300-r3",
+        predecessor_run_id="cladder-calibration-300-r4",
         predecessor_requirement="frozen_complete_calibration_scored_final_configuration_freeze",
         recommended_max_new_items=3,
     ),

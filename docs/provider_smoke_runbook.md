@@ -1,6 +1,6 @@
 # Provider Synthetic-Smoke Runbook
 
-**Status:** synthetic-smoke evidence retained; R3 CLadder canary requires separate authorization
+**Status:** synthetic-smoke evidence retained; R4 CLadder canary requires separate authorization
 
 This runbook verifies transport and response compatibility using a fixed
 arithmetic question. It never reads a CLadder split, a gold label, or an
@@ -80,13 +80,13 @@ Do not run CLadder 60 until all primary providers pass, the runtime roster and
 pricing are frozen, the controller passes integration tests, and execution
 preflight passes.
 
-## 5. Controlled CLadder canary R3
+## 5. Controlled CLadder canary R4
 
-The R1 and R2 canary runs are frozen and failed. Do not resume, overwrite, or
-reuse either one. Amendment 006 defines a separate R3 run and enables only the
+The R1, R2, and R3 canary runs are frozen and failed. Do not resume, overwrite,
+or reuse them. Amendment 007 defines a separate R4 run and enables only the
 smoke controller; it does not change the synthetic-smoke commands above and
 does not authorize calibration or locked test. After structural and smoke
-execution preflight plus the R3 canary dry-run pass, the command that
+execution preflight plus the R4 canary dry-run pass, the command that
 would require a new, separate authorization is:
 
 ```powershell
@@ -96,8 +96,8 @@ uv run --env-file .env python scripts/run_benchmark.py `
   --authorize-live-smoke
 ```
 
-Expected run ID: `cladder-smoke-canary-3-r3`. Expected artifact root:
-`artifacts/runs/cladder-smoke-canary-3-r3/`.
+Expected run ID: `cladder-smoke-canary-3-r4`. Expected artifact root:
+`artifacts/runs/cladder-smoke-canary-3-r4/`.
 
 The canary passes only when its frozen manifest is complete, all 51 logical
 calls complete with zero terminal errors, provider counts are 33/6/3/3/6 for
@@ -105,4 +105,4 @@ Groq/NVIDIA/Gemini/Cloudflare/OpenAI, no more than 204 transport attempts are
 recorded, every response parses to `YES` or `NO`, exact model identity and
 artifact integrity hold, and NVIDIA/secret/accounting checks remain valid.
 Failure blocks smoke-60; no command chains or automatically starts smoke-60.
-No R3 live call is authorized merely because this command is documented.
+No R4 live call is authorized merely because this command is documented.

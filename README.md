@@ -12,11 +12,11 @@ The pilot excludes causal discovery, extraction of DAGs from unstructured text, 
 
 ## Current status
 
-Day 1 protocol design and the sealed-split workflow are complete. The frozen R1
-and R2 operational canaries failed before any gold was opened and remain
-immutable audit trails. Amendment 006 defines the narrow cross-split R3
-output-cap revision. No live CLadder call is authorized implicitly: a
-separately authorized R3 three-item canary must pass before smoke-60.
+Day 1 protocol design and the sealed-split workflow are complete. The frozen R1,
+R2, and R3 operational canaries failed before any gold was opened and remain
+immutable audit trails. Amendment 007 defines the narrow cross-split R4 NVIDIA
+thinking-control revision. No live CLadder call is authorized implicitly: a
+separately authorized R4 three-item canary must pass before smoke-60.
 Calibration and locked-test live execution remain disabled.
 
 ## Planned methodology
@@ -54,7 +54,7 @@ uv run pytest
 uv run python scripts/validate_preflight.py
 ```
 
-Structural and smoke execution preflight are expected to pass for the R3
+Structural and smoke execution preflight are expected to pass for the R4
 controlled-smoke configuration. Missing official pricing remains blocked by
 default; NVIDIA is covered only by the explicit Amendment 003 waiver:
 
@@ -64,7 +64,7 @@ uv run python scripts/validate_preflight.py --execution --split smoke
 
 Do not weaken or bypass a failed gate. Live acknowledgement flags are
 split-specific; only smoke is enabled by policy. Smoke-60 is additionally
-blocked until the frozen R3 three-item canary passes. Calibration and locked
+blocked until the frozen R4 three-item canary passes. Calibration and locked
 test remain `BLOCKED_NOT_AUTHORIZED` even when their flags are supplied.
 
 ## Sealed inference preparation
@@ -87,7 +87,7 @@ and model prompt.
 
 `scripts/smoke_provider.py` is restricted to a non-benchmark arithmetic prompt and requires both an installed verified adapter factory and the explicit `--authorize-live-call` flag. Existing accepted evidence must not be repeated merely because the script exists.
 
-Preview each fixed R3 schedule without API calls or runtime-artifact writes:
+Preview each fixed R4 schedule without API calls or runtime-artifact writes:
 
 ```powershell
 uv run python scripts/run_benchmark.py --dry-run --split smoke

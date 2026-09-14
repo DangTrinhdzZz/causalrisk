@@ -9,7 +9,7 @@ from causalrisk.execution_policy import (
     EXECUTION_REVISION,
     METHOD_ORDER,
     MINIMUM_INTERVAL_SECONDS,
-    R2_RUN_ID,
+    R3_RUN_ID,
     SMOKE_CANARY_POLICY,
     SPLIT_POLICIES,
 )
@@ -18,18 +18,18 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 def test_exact_cross_split_counts_run_ids_and_authorization_matrix():
-    assert EXECUTION_REVISION == "cross_split_execution_r3"
+    assert EXECUTION_REVISION == "cross_split_execution_r4"
     assert (SMOKE_CANARY_POLICY.expected_logical_calls, SMOKE_CANARY_POLICY.max_transport_attempts) == (51, 204)
-    assert SMOKE_CANARY_POLICY.run_id == "cladder-smoke-canary-3-r3"
-    assert SMOKE_CANARY_POLICY.predecessor_run_id == R2_RUN_ID
-    assert SMOKE_CANARY_POLICY.predecessor_requirement == "frozen_failed_r2_remediation_input"
+    assert SMOKE_CANARY_POLICY.run_id == "cladder-smoke-canary-3-r4"
+    assert SMOKE_CANARY_POLICY.predecessor_run_id == R3_RUN_ID
+    assert SMOKE_CANARY_POLICY.predecessor_requirement == "frozen_failed_r3_remediation_input"
     expected = {
-        "smoke": (60, 1020, 4080, "cladder-smoke-60-r3", True, "--authorize-live-smoke"),
+        "smoke": (60, 1020, 4080, "cladder-smoke-60-r4", True, "--authorize-live-smoke"),
         "calibration": (
             300,
             5100,
             20400,
-            "cladder-calibration-300-r3",
+            "cladder-calibration-300-r4",
             False,
             "--authorize-live-calibration",
         ),
@@ -37,7 +37,7 @@ def test_exact_cross_split_counts_run_ids_and_authorization_matrix():
             600,
             10200,
             40800,
-            "cladder-locked-test-600-r3",
+            "cladder-locked-test-600-r4",
             False,
             "--authorize-live-locked-test",
         ),
@@ -62,12 +62,12 @@ def test_exact_cross_split_counts_run_ids_and_authorization_matrix():
     assert len({policy.authorization_flag for policy in SPLIT_POLICIES.values()}) == 3
     assert "--authorize-live" not in {policy.authorization_flag for policy in SPLIT_POLICIES.values()}
     assert SPLIT_POLICIES["smoke"].predecessor_run_id == SMOKE_CANARY_POLICY.run_id
-    assert SPLIT_POLICIES["calibration"].predecessor_run_id == "cladder-smoke-60-r3"
-    assert SPLIT_POLICIES["locked_test"].predecessor_run_id == "cladder-calibration-300-r3"
-    assert R2_RUN_ID not in {SMOKE_CANARY_POLICY.run_id, *(policy.run_id for policy in SPLIT_POLICIES.values())}
+    assert SPLIT_POLICIES["calibration"].predecessor_run_id == "cladder-smoke-60-r4"
+    assert SPLIT_POLICIES["locked_test"].predecessor_run_id == "cladder-calibration-300-r4"
+    assert R3_RUN_ID not in {SMOKE_CANARY_POLICY.run_id, *(policy.run_id for policy in SPLIT_POLICIES.values())}
 
 
-def test_every_configured_role_has_uniform_r3_cap_and_groq_pacing_is_unchanged():
+def test_every_configured_role_has_uniform_r4_cap_and_groq_pacing_is_unchanged():
     configs = [load_config(ROOT / "configs/methods" / f"{config_id}.yaml") for config_id in METHOD_ORDER]
     assert all(
         cap == 2048

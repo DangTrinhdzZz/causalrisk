@@ -2,7 +2,7 @@
 
 **Decision date:** 2026-09-11
 
-**Status:** approved and retained by Amendment 006 execution revision R3
+**Status:** approved and retained by Amendment 007 execution revision R4
 
 **Applies before:** any CLadder smoke, calibration, or locked-test inference
 
@@ -51,10 +51,10 @@ normalized total.
 ## 4. Execution gate
 
 This pricing amendment does not itself authorize live API calls, CLadder
-execution, calibration, or locked-test inference. Amendment 006 retains
+execution, calibration, or locked-test inference. Amendment 007 retains
 `execution_enabled: true` in all six method configs while independently
 allowing live execution only for smoke under split-specific policy. Before any
 live canary, structural and execution preflight, inference-view validation,
-R2 lineage validation, and the existing runtime evidence gates must pass
+R3 lineage validation, and the existing runtime evidence gates must pass
 under this policy. NVIDIA's normalized price and actual charge remain `null`;
 neither zero nor a proxy price is permitted.

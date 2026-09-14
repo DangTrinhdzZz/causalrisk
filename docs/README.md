@@ -18,8 +18,10 @@ This directory will contain the documents that define and govern the study:
 - `amendment_004_controlled_smoke_enablement.md`: smoke-only enablement, live canary sequencing, and pass gates.
 - `amendment_005_cross_split_execution_remediation.md`: frozen R1 failure analysis, narrow remediation, and the cross-split R2 execution contract.
 - `amendment_006_r3_output_cap_remediation.md`: frozen R2 failure lineage and the narrow R3 output-cap synchronization.
+- `amendment_007_r4_nvidia_thinking_control.md`: frozen R3 failure lineage and NVIDIA-only non-thinking request control.
 - `r1_operational_canary_forensic_aggregate.json`: label-free operational aggregate for the immutable failed R1 canary.
 - `r2_operational_canary_forensic_aggregate.json`: label-free operational aggregate for the immutable failed R2 canary.
+- `r3_operational_canary_forensic_aggregate.json`: label-free operational aggregate for the immutable failed R3 canary.
 - `day2_runtime_readiness.md`: current offline readiness, capacity, and phase-gate status.
 - `provider_smoke_runbook.md`: one-provider-at-a-time, non-CLadder runtime-verification procedure.
 

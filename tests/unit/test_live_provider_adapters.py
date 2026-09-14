@@ -169,6 +169,35 @@ def test_openai_compatible_adapter_uses_declared_provider_fields():
     assert payload["max_completion_tokens"] == 8
     assert payload["seed"] == 17
     assert payload["stream"] is False
+    assert "chat_template_kwargs" not in payload
+    assert "extra_body" not in payload
+    assert "reasoning_budget" not in payload
+
+
+def test_nvidia_payload_disables_thinking_without_wrapper_or_reasoning_budget():
+    transport = FakeTransport(
+        {
+            "id": "chat_1",
+            "model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+            "choices": [{"message": {"content": "YES"}, "finish_reason": "stop"}],
+            "usage": {"prompt_tokens": 5, "completion_tokens": 2},
+        }
+    )
+    adapter = OpenAICompatibleChatAdapter(
+        "nvidia_nim",
+        "NVIDIA_API_KEY",
+        SecretValue("fake-nvidia"),
+        "https://example.invalid/chat",
+        transport=transport,
+    )
+
+    adapter.complete(request("nvidia/nemotron-3.5-lightning-30b-a3b"))
+
+    _, _, payload = transport.calls[0]
+    assert payload["chat_template_kwargs"] == {"enable_thinking": False}
+    assert payload["max_tokens"] == 8
+    assert "extra_body" not in payload
+    assert "reasoning_budget" not in payload
 
 
 def test_gemini_adapter_extracts_generate_content_shape():

@@ -41,6 +41,8 @@ class OpenAICompatibleChatAdapter:
             self.max_tokens_field: request.max_output_tokens,
             "stream": False,
         }
+        if self.name == "nvidia_nim":
+            payload["chat_template_kwargs"] = {"enable_thinking": False}
         if request.seed is not None:
             if self.seed_field is None:
                 raise ClassifiedFailure(

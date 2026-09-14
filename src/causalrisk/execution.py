@@ -1,4 +1,4 @@
-"""Amendment 006 cross-split execution core with fail-closed R3 lineage."""
+"""Amendment 007 cross-split execution core with fail-closed R4 lineage."""
 
 from __future__ import annotations
 
@@ -28,7 +28,7 @@ from causalrisk.execution_policy import (
     VIEW_SCHEMA_VERSION,
     SplitExecutionPolicy,
 )
-from causalrisk.lineage import artifact_tree_sha256, file_sha256_bytes, verify_r2_remediation_input
+from causalrisk.lineage import artifact_tree_sha256, file_sha256_bytes, verify_r3_remediation_input
 from causalrisk.parsing import parse_yesno
 from causalrisk.pricing import (
     UsageBreakdown,
@@ -1008,7 +1008,7 @@ def execute_split(
     return {**summary, "artifact_path": str(run_dir), "run_status": "complete"}
 
 
-def r3_canary_artifact_passed(artifact_root: Path) -> bool:
+def r4_canary_artifact_passed(artifact_root: Path) -> bool:
     run_dir = artifact_root / SMOKE_CANARY_POLICY.run_id
     try:
         manifest = _read_json(run_dir / "manifest.json")
@@ -1132,7 +1132,7 @@ def r3_canary_artifact_passed(artifact_root: Path) -> bool:
 
 def predecessor_gate_for_policy(artifact_root: Path, policy: SplitExecutionPolicy) -> dict[str, Any]:
     if policy.canary:
-        verified = verify_r2_remediation_input(artifact_root)
+        verified = verify_r3_remediation_input(artifact_root)
         run_dir = artifact_root / policy.predecessor_run_id
         return {
             "run_id": policy.predecessor_run_id,
@@ -1143,7 +1143,7 @@ def predecessor_gate_for_policy(artifact_root: Path, policy: SplitExecutionPolic
             "verified": verified,
         }
     predecessor = artifact_root / policy.predecessor_run_id
-    verified = r3_canary_artifact_passed(artifact_root) if policy.split == "smoke" else False
+    verified = r4_canary_artifact_passed(artifact_root) if policy.split == "smoke" else False
     return {
         "run_id": policy.predecessor_run_id,
         "requirement": policy.predecessor_requirement,

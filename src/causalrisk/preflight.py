@@ -10,7 +10,7 @@ from pathlib import Path
 from causalrisk.capacity import CapacityError, build_capacity_plan, load_provider_limits
 from causalrisk.config import ConfigError, load_config, validate_config
 from causalrisk.execution_policy import MINIMUM_INTERVAL_SECONDS, get_execution_policy
-from causalrisk.lineage import verify_r2_remediation_input
+from causalrisk.lineage import verify_r3_remediation_input
 from causalrisk.pricing import PricingError, load_pricing, missing_official_prices, waiver_allows_unpriced_provider
 from causalrisk.prompts import file_sha256, load_prompt_bundle
 from causalrisk.providers.candidates import PROVIDER_CANDIDATES
@@ -199,12 +199,12 @@ def run_preflight(
         else:
             checks.append(PreflightCheck("projected_provider_capacity", False, "provider limits unavailable"))
         if execution_split == "smoke":
-            r2_intact = verify_r2_remediation_input(root / "artifacts/runs")
+            r3_intact = verify_r3_remediation_input(root / "artifacts/runs")
             checks.append(
                 PreflightCheck(
-                    "r2_immutable_remediation_lineage",
-                    r2_intact,
-                    "R2 frozen failed tree checksum matches Amendment 006" if r2_intact else "R2 lineage mismatch",
+                    "r3_immutable_remediation_lineage",
+                    r3_intact,
+                    "R3 frozen failed tree checksum matches Amendment 007" if r3_intact else "R3 lineage mismatch",
                 )
             )
         waiver_failures = []
