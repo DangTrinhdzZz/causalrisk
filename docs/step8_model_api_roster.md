@@ -1,6 +1,6 @@
 # Step 8 – Model/API Roster Protocol
 
-**Status:** protocol-level complete; provider connectivity, exact model identifiers, quotas, billing limits, and runtime behavior are not yet verified.
+**Status:** base protocol frozen; operational roster finalized by Amendment 008 R5
 
 ## 1. Purpose
 
@@ -14,15 +14,19 @@ Benchmark execution remains blocked until the later implementation stage complet
 
 ## 3. Provisional provider/model roster
 
-“Provisionally selected” means eligible for implementation and smoke-test evaluation. “Runtime verified” means that the exact endpoint, model ID, authentication path, quota, billing behavior, response schema, and failure behavior have been confirmed in code. No provider below is runtime verified by this document.
+The terms below record the original provisional selection. The controlling
+operational state is Amendment 008: four exact active R5 routes have qualifying
+synthetic evidence, NVIDIA is `excluded_protocol_noncompliant`, and Mistral is
+`excluded_unavailable`. Account quota and billing behavior remain externally
+variable and are not inferred by this document.
 
 | Provider | Provisional status | Candidate use | Verification still required |
 |---|---|---|---|
 | Groq | Available candidate; free-tier quota checked only at a preliminary level | Candidate primary, specialist, or backup endpoint, subject to capability matching | Exact model ID, live availability, real quota and rate limits, billing behavior, structured output, latency, and retry behavior |
 | Gemini | Available candidate; quota checked only at a preliminary level | Candidate primary or council role | Exact text model ID, live availability, quota and billing limits, structured output, latency, and retry behavior |
 | Mistral | Excluded/unavailable after HTTP 429 (`code=1300`, `type=rate_limited`) and a zero requests-per-minute limit | No execution role or fallback eligibility | Reconsideration requires a later amendment and successful verification |
-| Cloudflare Workers AI | Candidate provider | Candidate specialist or backup endpoint | Account binding, exact model ID, runtime availability, quota, pricing, schema support, latency, and retry behavior |
-| NVIDIA NIM | Synthetic smoke passed with the selected Nemotron model | Primary skeptical Critic | Pricing and remaining runtime-freeze gates |
+| Cloudflare Workers AI | Runtime-verified exact-model route | R5 C3 Critic and two independent C5 specialist-Critic calls | Account quota and billing remain externally variable |
+| NVIDIA NIM | `excluded_protocol_noncompliant`; historical R1-R4 only | No R5 execution role or credential loading | Reconsideration is outside the final R5 protocol |
 | OpenRouter | Discovery and emergency fallback only | Not a primary experimental endpoint | Any later use requires verification and the governance action described below |
 
 OpenRouter is not part of the primary experimental endpoint roster. It may be promoted only through an explicit protocol amendment made before affected benchmark execution; the amendment must identify the model/provider route and preserve the same fairness and verification requirements.
@@ -32,9 +36,9 @@ OpenRouter is not part of the primary experimental endpoint roster. It may be pr
 - `A1`, `A3`, and `A5` use the same provisionally designated primary model within their matched comparison. `A3` and `A5` repeat independent calls to that model; they do not introduce additional model families.
 - `C1` is operationally identical to `A1`. It is a shared boundary condition, not an independent multi-agent observation and not evidence of a collaboration effect.
 - `C3` uses distinct, capability-matched model families for Analyst, Critic, and Adjudicator roles.
-- `C5` uses distinct, capability-matched model families for the Analyst, three specialist critics, and Adjudicator roles.
+- `C5` uses five role-distinct calls across four capability-matched model families; its graph/identification and formal/numerical Critics are independent calls to the same Cloudflare Qwen route.
 - The council Analyst uses the primary model matched to the corresponding single-agent baseline. Other roles are assigned before evaluation according to causal-reasoning suitability, reliability, price/latency tier, and role fit—not after observing benchmark accuracy.
-- NVIDIA `nvidia/nemotron-3.5-lightning-30b-a3b` is the selected skeptical Critic for C3 and the corresponding graph/identification Critic slot in C5. Mistral is excluded and unavailable.
+- NVIDIA `nvidia/nemotron-3.5-lightning-30b-a3b` is retained only as an excluded historical candidate after R2-R4 protocol-compliance failures. Mistral remains excluded and unavailable.
 
 Final role-to-model mappings must be documented and frozen after operational verification and before benchmark execution. A fallback substitution must never silently change the experimental condition.
 
@@ -45,7 +49,7 @@ Final role-to-model mappings must be documented and frozen after operational ver
 3. Gold answers and evaluation-only metadata—including rung, query type, graph ID, story ID, model ID, protected-family information, and split membership—must remain outside agents, prompts, controllers, and other model-facing code.
 4. Benchmark inference must use no retrieval, web browsing, benchmark lookup, cross-item context, or metadata-derived hints.
 5. Call budgets and retry rules are held constant for matched comparisons. Equal call count is not described as equal compute: token usage, latency, monetary cost, completion rate, invalid-output rate, retry count, and failure type are measured separately.
-6. Council models must be drawn from distinct, reasonably capability-matched families and predeclared price/latency tiers. Models must not be assigned strategically after benchmark outcomes are known.
+6. Council roles must use a predeclared, reasonably capability-matched roster and price/latency tiers. C3 uses three model families; R5 C5 uses four families across five independent role/topology calls. Models must not be assigned strategically after benchmark outcomes are known.
 7. Provider-specific prompt wrappers may implement equivalent transport or schema requirements but must not add condition-specific causal information.
 
 ## 6. Runtime verification plan
@@ -76,25 +80,28 @@ A provider or model that fails runtime verification is excluded or replaced befo
 
 ## 9. Final status
 
-**Step 8 is complete only at the protocol level.** The provider/model roster and its governance rules are provisionally defined, but no provider is declared fully runtime verified here. No API or benchmark call has been made by this step. Benchmark execution is prohibited until the pending smoke tests pass and the operational roster is frozen.
+**Step 8 is complete at the base-protocol level.** Amendment 008 controls the
+final R5 role mapping and exclusions. R1-R4 compatibility canaries are not
+benchmark results, and R5 benchmark execution remains prohibited until its
+separately authorized canary and sequential phase gates pass.
 
 ## 10. Completion and pending-verification checklist
 
 Completed in Step 8:
 
-- [x] Defined the execution provider pool: Groq, NVIDIA NIM, Gemini, Cloudflare Workers AI, and OpenAI.
+- [x] Defined the final R5 execution provider pool: Groq, Gemini, Cloudflare Workers AI, and OpenAI.
 - [x] Restricted OpenRouter to discovery/emergency fallback status.
-- [x] Recorded Mistral as excluded/unavailable and NVIDIA NIM as the primary skeptical Critic.
+- [x] Recorded Mistral as `excluded_unavailable` and NVIDIA NIM as `excluded_protocol_noncompliant`.
 - [x] Defined role-assignment, fairness, comparability, leakage-control, secret-handling, and fallback rules.
 - [x] Preserved `C1` as the shared `A1/C1` boundary condition.
 - [x] Blocked benchmark execution pending operational verification.
 
 Pending for the later implementation stage:
 
-- [ ] Verify every intended provider endpoint with minimal non-benchmark smoke tests.
-- [ ] Finalize exact model IDs, including the Gemini text model.
-- [ ] Verify real quota, rate limits, billing limits, prices, and account availability.
-- [ ] Verify token accounting, latency, normalized output parsing, retries, and failure classification.
-- [ ] Confirm secret redaction and the model-facing data boundary in implementation.
-- [ ] Select and freeze the final role-to-model mapping and all runtime settings.
-- [ ] Document any provider replacement or OpenRouter promotion through a protocol amendment before use.
+- [x] Verify every active R5 provider endpoint with minimal non-benchmark smoke tests.
+- [x] Finalize exact active R5 model IDs.
+- [ ] Verify real quota, rate limits, billing limits, and account availability.
+- [x] Verify token accounting, latency, normalized output parsing, retries, and failure classification.
+- [x] Confirm secret redaction and the model-facing data boundary in implementation.
+- [x] Select and freeze the final R5 role-to-model mapping and runtime settings.
+- [x] Document the NVIDIA exclusion and Cloudflare role replacement in Amendment 008.

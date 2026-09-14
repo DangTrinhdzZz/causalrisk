@@ -43,6 +43,17 @@ def _exact_code_commit(root: Path) -> str:
     ).stdout.strip()
 
 
+def _load_execution_adapters() -> dict[str, Any]:
+    adapters = {}
+    for provider, candidate in PROVIDER_CANDIDATES.items():
+        if not candidate.primary or candidate.availability != "available":
+            continue
+        module_name, factory_name = candidate.factory_specification.split(":", 1)
+        factory: Any = getattr(importlib.import_module(module_name), factory_name)
+        adapters[provider] = factory(load_credential(candidate.credential_environment_variable))
+    return adapters
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -129,13 +140,7 @@ def main() -> None:
     if not predecessor_gate["verified"]:
         raise SystemExit("Live execution blocked: the exact predecessor gate has not passed.")
     code_commit = _exact_code_commit(root)
-    adapters = {}
-    for provider, candidate in PROVIDER_CANDIDATES.items():
-        if not candidate.primary or candidate.availability != "available":
-            continue
-        module_name, factory_name = candidate.factory_specification.split(":", 1)
-        factory: Any = getattr(importlib.import_module(module_name), factory_name)
-        adapters[provider] = factory(load_credential(candidate.credential_environment_variable))
+    adapters = _load_execution_adapters()
     result = execute_split(
         policy=policy,
         authorization_flag=selected_authorizations[0],

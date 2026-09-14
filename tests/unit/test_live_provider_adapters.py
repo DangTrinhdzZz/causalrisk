@@ -391,16 +391,18 @@ def test_model_not_found_and_quota_codes_override_ambiguous_http_statuses():
     assert quota.failure_code == "configuration/quota_exhaustion"
 
 
-def test_primary_council_candidate_families_are_distinct_and_mistral_is_excluded():
+def test_final_execution_roster_excludes_mistral_and_protocol_noncompliant_nvidia():
     primary = [
         candidate
         for candidate in PROVIDER_CANDIDATES.values()
         if candidate.primary and candidate.availability == "available"
     ]
-    assert len(primary) == 5
-    assert len({candidate.model_family for candidate in primary}) == 5
+    assert len(primary) == 4
+    assert len({candidate.model_family for candidate in primary}) == 4
     assert PROVIDER_CANDIDATES["openai"].intended_role == "adjudicator"
     assert PROVIDER_CANDIDATES["nvidia_nim"].intended_role == "skeptical_critic"
-    assert PROVIDER_CANDIDATES["nvidia_nim"].primary is True
+    assert PROVIDER_CANDIDATES["nvidia_nim"].primary is False
+    assert PROVIDER_CANDIDATES["nvidia_nim"].availability == "excluded_protocol_noncompliant"
+    assert all(revision in PROVIDER_CANDIDATES["nvidia_nim"].reason for revision in ("R2", "R3", "R4"))
     assert PROVIDER_CANDIDATES["mistral"].primary is False
     assert PROVIDER_CANDIDATES["mistral"].availability == "excluded_unavailable"

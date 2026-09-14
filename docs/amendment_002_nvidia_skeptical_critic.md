@@ -2,7 +2,7 @@
 
 **Decision date:** 2026-09-11
 
-**Status:** approved at protocol level; benchmark execution remains blocked
+**Status:** historical R1-R4 assignment; superseded by Amendment 008
 
 **Applies before:** any CLadder smoke, calibration, or locked-test inference
 

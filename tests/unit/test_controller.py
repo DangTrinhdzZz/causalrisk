@@ -311,13 +311,13 @@ def test_ambiguous_in_flight_attempt_blocks_resume_without_call(tmp_path):
     assert adapter.calls == 0
 
 
-def test_canary_pass_requires_frozen_complete_zero_error_summary(tmp_path):
+def test_final_r5_topology_cannot_open_the_legacy_r1_canary_gate(tmp_path):
     from causalrisk.pricing import load_pricing
 
     configs = tuple(reversed([load_config(path) for path in sorted((ROOT / "configs/methods").glob("*.yaml"))]))
     adapters = {
         provider: FakeAdapter(name=provider)
-        for provider in ("groq", "nvidia_nim", "gemini", "cloudflare_workers_ai", "openai")
+        for provider in ("groq", "gemini", "cloudflare_workers_ai", "openai")
     }
     execute_smoke(
         split="smoke",
@@ -334,7 +334,7 @@ def test_canary_pass_requires_frozen_complete_zero_error_summary(tmp_path):
         sleep=lambda _seconds: None,
         jitter=lambda _seconds: 0,
     )
-    assert canary_artifact_passed(tmp_path)
+    assert not canary_artifact_passed(tmp_path)
     manifest = json.loads((tmp_path / "cladder-smoke-canary-3" / "manifest.json").read_text(encoding="utf-8"))
     assert manifest["config_ids"] == [
         "A1_SINGLE_V1",

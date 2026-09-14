@@ -2,7 +2,7 @@
 
 **Decision date:** 2026-09-14
 
-**Status:** offline validation only; R4 live canary not authorized
+**Status:** superseded by Amendment 008 after the terminal R4 canary failure
 
 ## R3 terminal result and immutable lineage
 

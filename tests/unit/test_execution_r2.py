@@ -11,7 +11,7 @@ from causalrisk.controller import (
     execute_split,
     logical_call_id,
     predecessor_gate_for_policy,
-    r4_canary_artifact_passed,
+    r5_canary_artifact_passed,
 )
 from causalrisk.data import LabelFreeItem
 from causalrisk.execution import _atomic_create_json
@@ -36,7 +36,7 @@ CONFIGS = tuple(load_config(ROOT / "configs/methods" / f"{config_id}.yaml") for 
 
 
 @dataclass
-class R4FakeAdapter:
+class R5FakeAdapter:
     name: str
     events: list = field(default_factory=list)
     truncate: bool = False
@@ -85,7 +85,7 @@ class R4FakeAdapter:
         )
 
 
-def policy(item_count=2, run_id="test-r4-run"):
+def policy(item_count=2, run_id="test-r5-run"):
     return SplitExecutionPolicy(
         split="smoke",
         item_count=item_count,
@@ -121,8 +121,8 @@ def items(count=2):
 def adapters(*, truncate_provider=None):
     events = []
     result = {
-        provider: R4FakeAdapter(provider, events, truncate=provider == truncate_provider)
-        for provider in ("groq", "nvidia_nim", "gemini", "cloudflare_workers_ai", "openai")
+        provider: R5FakeAdapter(provider, events, truncate=provider == truncate_provider)
+        for provider in ("groq", "gemini", "cloudflare_workers_ai", "openai")
     }
     return result, events
 
@@ -163,7 +163,7 @@ def test_split_specific_authorization_and_disabled_phases_make_zero_calls(tmp_pa
                 authorization_flag=SPLIT_POLICIES[split].authorization_flag,
             )
     assert sum(adapter.calls for adapter in fake_adapters.values()) == 0
-    assert not (tmp_path / "test-r4-run").exists()
+    assert not (tmp_path / "test-r5-run").exists()
 
 
 def test_item_major_planned_pause_and_deterministic_resume_without_recalling(tmp_path):
@@ -243,7 +243,7 @@ def test_output_cap_is_terminal_and_failure_keeps_observability(tmp_path):
     fake_adapters, _events = adapters(truncate_provider="groq")
     with pytest.raises(RuntimeError, match="terminal-error threshold"):
         invoke(tmp_path, selected_adapters=fake_adapters)
-    run_dir = tmp_path / "test-r4-run"
+    run_dir = tmp_path / "test-r5-run"
     manifest = json.loads((run_dir / "manifest.json").read_text(encoding="utf-8"))
     call = json.loads(next((run_dir / "calls/A1_SINGLE_V1").glob("*.json")).read_text(encoding="utf-8"))
     attempt = json.loads(next((run_dir / "attempts/A1_SINGLE_V1").glob("*.json")).read_text(encoding="utf-8"))
@@ -257,9 +257,9 @@ def test_output_cap_is_terminal_and_failure_keeps_observability(tmp_path):
         invoke(tmp_path, selected_adapters=adapters()[0])
 
 
-def test_success_artifacts_have_observability_and_nvidia_null_policy(tmp_path):
+def test_success_artifacts_have_observability_and_only_priced_r5_providers(tmp_path):
     invoke(tmp_path)
-    run_dir = tmp_path / "test-r4-run"
+    run_dir = tmp_path / "test-r5-run"
     attempts = [json.loads(path.read_text(encoding="utf-8")) for path in run_dir.glob("attempts/*/*.json")]
     calls = [json.loads(path.read_text(encoding="utf-8")) for path in run_dir.glob("calls/*/*.json")]
     required = {
@@ -276,14 +276,9 @@ def test_success_artifacts_have_observability_and_nvidia_null_policy(tmp_path):
     }
     assert all(required.issubset(record) for record in attempts)
     assert all(required.issubset(record) for record in calls)
-    nvidia = [record for record in calls if record["provider"] == "nvidia_nim"]
-    assert nvidia
-    assert all(
-        record["normalized_list_cost_usd"] is None
-        and record["actual_charge_usd"] is None
-        and record["billing_mode"] == "free_prototype"
-        for record in nvidia
-    )
+    assert all(record["provider"] != "nvidia_nim" for record in calls)
+    assert all(record["normalized_list_cost_usd"] is not None for record in calls)
+    assert all(record["actual_charge_usd"] is None for record in calls)
     assert not list(run_dir.rglob("*.tmp"))
 
 
@@ -292,7 +287,7 @@ def test_retry_after_and_backoff_history_are_preserved(tmp_path):
     fake_adapters["groq"].rate_limit_once = True
     sleeps = []
     invoke(tmp_path, selected_adapters=fake_adapters, sleep=sleeps.append)
-    run_dir = tmp_path / "test-r4-run"
+    run_dir = tmp_path / "test-r5-run"
     groq_calls = [
         json.loads(path.read_text(encoding="utf-8"))
         for path in run_dir.glob("calls/*/*.json")
@@ -307,7 +302,7 @@ def test_retry_after_and_backoff_history_are_preserved(tmp_path):
     assert 2.5 in sleeps
 
 
-def test_only_exact_complete_r4_canary_opens_smoke_gate(tmp_path):
+def test_only_exact_complete_r5_canary_opens_smoke_gate(tmp_path):
     fake_adapters, _events = adapters()
     canary_items = items(3)
     canary_lineage = lineage(
@@ -325,15 +320,20 @@ def test_only_exact_complete_r4_canary_opens_smoke_gate(tmp_path):
         selected_adapters=fake_adapters,
         lineage=canary_lineage,
     )
-    assert r4_canary_artifact_passed(tmp_path)
-    assert not (tmp_path / "cladder-smoke-canary-3-r3").exists()
+    assert r5_canary_artifact_passed(tmp_path)
+    assert not (tmp_path / "cladder-smoke-canary-3-r4").exists()
 
 
 @pytest.mark.parametrize(
     "legacy_run_id",
-    ["cladder-smoke-canary-3", "cladder-smoke-canary-3-r2", "cladder-smoke-canary-3-r3"],
+    [
+        "cladder-smoke-canary-3",
+        "cladder-smoke-canary-3-r2",
+        "cladder-smoke-canary-3-r3",
+        "cladder-smoke-canary-3-r4",
+    ],
 )
-def test_prior_or_nonmatching_r3_artifact_cannot_open_the_r4_canary_gate(tmp_path, legacy_run_id):
+def test_prior_or_nonmatching_r4_artifact_cannot_open_the_r5_canary_gate(tmp_path, legacy_run_id):
     legacy = tmp_path / legacy_run_id
     legacy.mkdir()
     (legacy / "manifest.json").write_text(
@@ -345,11 +345,11 @@ def test_prior_or_nonmatching_r3_artifact_cannot_open_the_r4_canary_gate(tmp_pat
         encoding="utf-8",
     )
     gate = predecessor_gate_for_policy(tmp_path, SMOKE_CANARY_POLICY)
-    assert gate["run_id"] == "cladder-smoke-canary-3-r3"
+    assert gate["run_id"] == "cladder-smoke-canary-3-r4"
     assert not gate["verified"]
 
 
-def test_wrong_predecessor_lineage_blocks_r4_canary_before_any_call(tmp_path):
+def test_wrong_predecessor_lineage_blocks_r5_canary_before_any_call(tmp_path):
     fake_adapters, _events = adapters()
     bad_lineage = lineage(
         selection_sha256="9" * 64,

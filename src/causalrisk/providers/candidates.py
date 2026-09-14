@@ -15,6 +15,7 @@ class ProviderCandidate:
     intended_role: str
     primary: bool
     availability: str = "available"
+    reason: str | None = None
 
 
 PROVIDER_CANDIDATES: dict[str, ProviderCandidate] = {
@@ -52,7 +53,7 @@ PROVIDER_CANDIDATES: dict[str, ProviderCandidate] = {
         "causalrisk.providers.factories:create_cloudflare_adapter",
         "@cf/qwen/qwen3-30b-a3b-fp8",
         "qwen3",
-        "formal_numerical_critic",
+        "critic",
         True,
     ),
     "openai": ProviderCandidate(
@@ -71,6 +72,11 @@ PROVIDER_CANDIDATES: dict[str, ProviderCandidate] = {
         "nvidia/nemotron-3.5-lightning-30b-a3b",
         "nemotron-3.5",
         "skeptical_critic",
-        True,
+        False,
+        "excluded_protocol_noncompliant",
+        (
+            "R2 reached the 1,024-token cap; R3 timed out then reached the 2,048-token cap; "
+            "R4 returned HTTP 200/stop but an ambiguous invalid label."
+        ),
     ),
 }

@@ -17,7 +17,7 @@ The numerical suffix $k \in \{1,3,5\}$ is the number of LLM inference calls avai
 | **A5** | Five independent calls to the *same* primary model | None; each receives only the original item and same base prompt | Deterministic majority vote | Larger single-agent self-consistency baseline |
 | **C1** | One call to the primary model | No inter-agent message | Its answer | Boundary control for council size 1; operationally identical to A1 |
 | **C3** | Three calls to three distinct, capability-matched model families | Analyst → Critic → Adjudicator | Adjudicator's evidence-based answer | Minimal heterogeneous causal council |
-| **C5** | Five calls to five distinct, capability-matched model families | Analyst → three independent specialist critics → Adjudicator | Adjudicator's evidence-based answer | Specialist heterogeneous causal council |
+| **C5** | Five role-distinct calls across four capability-matched model families | Analyst → three independent specialist critics → Adjudicator | Adjudicator's evidence-based answer | Role-heterogeneous causal council |
 
 `A3` and `A5` still belong to the single-agent family even though they make multiple API calls: all samples use one base model, one role, no dialogue, and no model sees another sample. An odd number of samples removes vote ties. The aggregator is deterministic code, not an LLM judge.
 
@@ -65,7 +65,7 @@ The existing retry policy applies unchanged: an invalid or failed call has at mo
 
 ## 6. Fairness rules and what comparisons can prove
 
-For a given $k$, `Ak` and `Ck` use the same original item, base causal instructions, retry rule, decoding policy, sealed split, and maximum number of LLM calls. Step 8 must choose the C3/C5 role models from distinct model families with comparable standalone causal performance and a predeclared price/latency tier; no role may be deliberately assigned an obviously stronger or weaker model. `Ak` always uses the same primary model selected for the corresponding council's Analyst role.
+For a given $k$, `Ak` and `Ck` use the same original item, base causal instructions, retry rule, decoding policy, sealed split, and maximum number of LLM calls. Step 8 must predeclare capability-matched role models and price/latency tiers; C3 uses three families, while the final C5 roster uses four families and five independent role/topology calls because its graph/identification and formal/numerical critics share one provider/model. No role may be deliberately assigned an obviously stronger or weaker model. `Ak` always uses the same primary model selected for the corresponding council's Analyst role.
 
 The primary analyses are `A1/C1`, `A3` versus `C3`, and `A5` versus `C5`, plus trends across $k=1,3,5$. Because C3/C5 use heterogeneous model families whereas A3/A5 repeatedly sample one primary model, these comparisons estimate the benefit or harm of the **complete heterogeneous collaboration design** at a fixed call budget. They do **not** identify a pure causal effect of communication separate from model diversity. The report must state this limitation; no seventh control configuration is added in this pilot.
 

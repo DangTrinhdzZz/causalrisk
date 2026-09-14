@@ -37,8 +37,13 @@ def load_pricing(path: str | Path) -> dict[str, Any]:
         for candidate in PROVIDER_CANDIDATES.values()
         if candidate.primary and candidate.availability == "available"
     }
-    if set(document.get("models", {})) != expected:
-        raise PricingError("pricing snapshot does not exactly match execution roster")
+    retained_history = {
+        f"{candidate.provider}:{candidate.model_id}"
+        for candidate in PROVIDER_CANDIDATES.values()
+        if candidate.availability == "excluded_protocol_noncompliant"
+    }
+    if set(document.get("models", {})) != expected | retained_history:
+        raise PricingError("pricing snapshot does not exactly match the active roster plus retained history")
     for key, price in document["models"].items():
         if not isinstance(price, dict) or not isinstance(price.get("source"), str):
             raise PricingError(f"pricing entry is malformed: {key}")

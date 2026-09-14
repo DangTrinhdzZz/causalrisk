@@ -4,6 +4,8 @@ from pathlib import Path
 
 import pytest
 
+from causalrisk.config import load_config
+from causalrisk.execution_policy import METHOD_ORDER
 from causalrisk.pricing import (
     PricingError,
     UsageBreakdown,
@@ -62,3 +64,16 @@ def test_cost_separates_cached_and_reasoning_tokens():
 
 def test_symbolic_sensitivity_adds_assumed_nvidia_rates_without_changing_subtotal():
     assert symbolic_sensitivity_cost_usd(Decimal("0.001"), 1000, 500, Decimal("2"), Decimal("4")) == Decimal("0.005")
+
+
+def test_r5_execution_roster_has_full_normalized_pricing_coverage_when_usage_is_reported():
+    pricing = load_pricing(ROOT / "configs/pricing_2026-09-11.json")
+    missing = set(missing_official_prices(pricing))
+    configs = [load_config(ROOT / "configs/methods" / f"{config_id}.yaml") for config_id in METHOD_ORDER]
+    execution_keys = {
+        f"{provider}:{config.values['model_assignment'][role]}"
+        for config in configs
+        for role, provider in config.values["provider_assignment"].items()
+    }
+    assert not execution_keys & missing
+    assert all(normalized_list_cost_usd(pricing, key, UsageBreakdown(1, 1)) is not None for key in execution_keys)

@@ -51,12 +51,29 @@ def test_openai_is_the_provisional_shared_council_adjudicator():
     assert c5["execution_enabled"] is True
 
 
-def test_nvidia_replaces_mistral_and_c3_is_nested_in_c5():
+def test_cloudflare_critics_define_the_final_role_heterogeneous_councils():
     c3 = load_config(CONFIG_DIR / "C3_COUNCIL_V1.yaml").values
     c5 = load_config(CONFIG_DIR / "C5_COUNCIL_V1.yaml").values
-    assert c3["provider_assignment"]["critic"] == "nvidia_nim"
-    assert c5["provider_assignment"]["graph_identification_critic"] == "nvidia_nim"
+    assert c3["provider_assignment"]["critic"] == "cloudflare_workers_ai"
+    assert c5["provider_assignment"]["graph_identification_critic"] == "cloudflare_workers_ai"
+    assert c5["provider_assignment"]["formal_numerical_critic"] == "cloudflare_workers_ai"
     assert set(c3["provider_assignment"].values()).issubset(set(c5["provider_assignment"].values()))
     assert "mistral" not in c3["provider_pool"]
     assert "mistral" not in c5["provider_pool"]
-    assert c3["model_assignment"]["critic"] == "nvidia/nemotron-3.5-lightning-30b-a3b"
+    assert "nvidia_nim" not in c3["provider_pool"]
+    assert "nvidia_nim" not in c5["provider_pool"]
+    assert c3["model_assignment"]["critic"] == "@cf/qwen/qwen3-30b-a3b-fp8"
+
+
+def test_c5_cloudflare_critics_are_independent_role_and_position_calls():
+    from causalrisk.topology import build_execution_plan
+
+    config = load_config(CONFIG_DIR / "C5_COUNCIL_V1.yaml")
+    calls = {
+        call.role: call
+        for call in build_execution_plan(config).calls
+        if config.values["provider_assignment"][call.role] == "cloudflare_workers_ai"
+    }
+    assert set(calls) == {"graph_identification_critic", "formal_numerical_critic"}
+    assert calls["graph_identification_critic"].position == 2
+    assert calls["formal_numerical_critic"].position == 3

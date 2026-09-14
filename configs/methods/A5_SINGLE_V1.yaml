@@ -2,7 +2,7 @@ schema_version: 1
 config_id: A5_SINGLE_V1
 method_family: single_agent
 call_budget: 5
-provider_pool: [groq, nvidia_nim, gemini, cloudflare_workers_ai, openai]
+provider_pool: [groq, gemini, cloudflare_workers_ai, openai]
 provider_assignment:
   analyst: groq
 model_assignment:
@@ -26,4 +26,4 @@ expose_gold_label: false
 expose_metadata: false
 runtime_verified: true
 execution_enabled: true
-notes: Five independent Groq calls; R2 mechanics are cross-split while live authorization remains phase-gated.
+notes: Five independent Groq calls under the final R5 roster; live authorization remains phase-gated.

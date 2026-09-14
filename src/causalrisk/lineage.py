@@ -16,6 +16,9 @@ from causalrisk.execution_policy import (
     R3_ARTIFACT_TREE_SHA256,
     R3_MANIFEST_SHA256,
     R3_RUN_ID,
+    R4_ARTIFACT_TREE_SHA256,
+    R4_MANIFEST_SHA256,
+    R4_RUN_ID,
 )
 
 
@@ -82,4 +85,21 @@ def verify_r3_remediation_input(artifact_root: str | Path) -> bool:
         and manifest.get("run_status") == "failed"
         and file_sha256_bytes(manifest_path) == R3_MANIFEST_SHA256
         and artifact_tree_sha256(run_dir) == R3_ARTIFACT_TREE_SHA256
+    )
+
+
+def verify_r4_remediation_input(artifact_root: str | Path) -> bool:
+    run_dir = Path(artifact_root) / R4_RUN_ID
+    manifest_path = run_dir / "manifest.json"
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return False
+    return bool(
+        manifest.get("run_id") == R4_RUN_ID
+        and manifest.get("execution_revision") == "cross_split_execution_r4"
+        and manifest.get("freeze_state") == "frozen"
+        and manifest.get("run_status") == "failed"
+        and file_sha256_bytes(manifest_path) == R4_MANIFEST_SHA256
+        and artifact_tree_sha256(run_dir) == R4_ARTIFACT_TREE_SHA256
     )

@@ -10,7 +10,7 @@ from pathlib import Path
 from causalrisk.capacity import CapacityError, build_capacity_plan, load_provider_limits
 from causalrisk.config import ConfigError, load_config, validate_config
 from causalrisk.execution_policy import MINIMUM_INTERVAL_SECONDS, get_execution_policy
-from causalrisk.lineage import verify_r3_remediation_input
+from causalrisk.lineage import verify_r4_remediation_input
 from causalrisk.pricing import PricingError, load_pricing, missing_official_prices, waiver_allows_unpriced_provider
 from causalrisk.prompts import file_sha256, load_prompt_bundle
 from causalrisk.providers.candidates import PROVIDER_CANDIDATES
@@ -91,12 +91,17 @@ def run_preflight(
         checks.append(PreflightCheck("pricing_snapshot", False, str(error)))
     evidence = audit_runtime_evidence(root / "artifacts" / "smoke")
     missing_evidence = sorted(evidence.missing_primary_providers)
+    primary_provider_count = sum(
+        candidate.primary and candidate.availability == "available"
+        for candidate in PROVIDER_CANDIDATES.values()
+    )
     checks.append(
         PreflightCheck(
             "runtime_evidence",
             not missing_evidence,
             (
-                f"accepted all 5 execution providers; rejected {len(evidence.rejected)} non-qualifying reports"
+                f"accepted all {primary_provider_count} execution providers; "
+                f"rejected {len(evidence.rejected)} non-qualifying reports"
                 if not missing_evidence
                 else f"missing valid evidence for: {', '.join(missing_evidence)}"
             ),
@@ -199,16 +204,22 @@ def run_preflight(
         else:
             checks.append(PreflightCheck("projected_provider_capacity", False, "provider limits unavailable"))
         if execution_split == "smoke":
-            r3_intact = verify_r3_remediation_input(root / "artifacts/runs")
+            r4_intact = verify_r4_remediation_input(root / "artifacts/runs")
             checks.append(
                 PreflightCheck(
-                    "r3_immutable_remediation_lineage",
-                    r3_intact,
-                    "R3 frozen failed tree checksum matches Amendment 007" if r3_intact else "R3 lineage mismatch",
+                    "r4_immutable_remediation_lineage",
+                    r4_intact,
+                    "R4 frozen failed tree checksum matches Amendment 008" if r4_intact else "R4 lineage mismatch",
                 )
             )
+        execution_pricing_keys = {
+            f"{provider}:{values['model_assignment'][role]}"
+            for values in loaded_configs.values()
+            for role, provider in values.get("provider_assignment", {}).items()
+        }
+        execution_missing_prices = tuple(key for key in missing_prices if key in execution_pricing_keys)
         waiver_failures = []
-        for key in missing_prices:
+        for key in execution_missing_prices:
             provider = key.split(":", 1)[0]
             matching_configs = [
                 values
@@ -225,8 +236,10 @@ def run_preflight(
                 "official_pricing_policy",
                 pricing is not None and not waiver_failures,
                 (
-                    "all roster models priced"
-                    if not missing_prices
+                    "pricing snapshot unavailable"
+                    if pricing is None
+                    else "all R5 execution models have normalized list prices"
+                    if not execution_missing_prices
                     else "explicit NVIDIA symbolic-pricing waiver accepted"
                     if not waiver_failures
                     else f"missing official prices without valid waiver: {', '.join(waiver_failures)}"
@@ -264,6 +277,8 @@ def run_preflight(
         and c3["provider_assignment"]["analyst"] == c5["provider_assignment"]["analyst"]
         and c3["provider_assignment"]["critic"] == c5["provider_assignment"]["graph_identification_critic"]
         and c3["provider_assignment"]["adjudicator"] == c5["provider_assignment"]["adjudicator"]
+        and c5["provider_assignment"]["graph_identification_critic"] == "cloudflare_workers_ai"
+        and c5["provider_assignment"]["formal_numerical_critic"] == "cloudflare_workers_ai"
         and set(c3["provider_assignment"].values()).issubset(set(c5["provider_assignment"].values()))
         and set(c5["provider_assignment"].values()) == primary_providers
     )
@@ -271,7 +286,9 @@ def run_preflight(
         PreflightCheck(
             "amended_roster_consistency",
             roster_matches,
-            "C3 core roles are nested in the five-family C5 roster" if roster_matches else "roster mapping differs",
+            "C3 is nested in the five-agent, four-family role-heterogeneous C5 roster"
+            if roster_matches
+            else "roster mapping differs",
         )
     )
     mistral = PROVIDER_CANDIDATES.get("mistral")
@@ -281,16 +298,18 @@ def run_preflight(
         and mistral.primary is False
         and mistral.availability == "excluded_unavailable"
         and nvidia
-        and nvidia.primary is True
-        and nvidia.availability == "available"
+        and nvidia.primary is False
+        and nvidia.availability == "excluded_protocol_noncompliant"
         and nvidia.intended_role == "skeptical_critic"
+        and isinstance(nvidia.reason, str)
+        and all(revision in nvidia.reason for revision in ("R2", "R3", "R4"))
     )
     checks.append(
         PreflightCheck(
             "provider_availability_policy",
             provider_policy_matches,
             (
-                "Mistral excluded_unavailable; NVIDIA NIM primary skeptical_critic"
+                "Mistral excluded_unavailable; NVIDIA NIM excluded_protocol_noncompliant"
                 if provider_policy_matches
                 else "provider availability or role policy differs"
             ),

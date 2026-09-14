@@ -5,7 +5,6 @@
   "scope": "account_specific_limits_not_public_defaults",
   "providers": {
     "groq": {"source": "account dashboard value not captured", "RPM": null, "TPM": null, "RPD": null, "TPD": null},
-    "nvidia_nim": {"source": "account dashboard value not captured", "RPM": null, "TPM": null, "RPD": null, "TPD": null},
     "gemini": {"source": "account dashboard value not captured", "RPM": null, "TPM": null, "RPD": null, "TPD": null},
     "cloudflare_workers_ai": {"source": "account dashboard value not captured", "RPM": null, "TPM": null, "RPD": null, "TPD": null},
     "openai": {"source": "account dashboard value not captured", "RPM": null, "TPM": null, "RPD": null, "TPD": null}

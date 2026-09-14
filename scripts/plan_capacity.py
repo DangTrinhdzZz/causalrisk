@@ -14,7 +14,7 @@ from causalrisk.execution_policy import get_execution_policy
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--split", required=True, choices=("smoke", "calibration", "locked_test"))
-    parser.add_argument("--canary", action="store_true", help="plan the fixed three-item smoke R4 canary")
+    parser.add_argument("--canary", action="store_true", help="plan the fixed three-item smoke R5 canary")
     parser.add_argument("--max-new-items", type=int, help="declared per-session item bound")
     args = parser.parse_args()
     root = Path(__file__).resolve().parents[1]

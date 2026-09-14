@@ -1,4 +1,4 @@
-"""Public surface for Amendment 007 cross-split execution."""
+"""Public surface for Amendment 008 final cross-split execution."""
 
 from causalrisk.execution import (
     ExecutionLineage,
@@ -6,7 +6,7 @@ from causalrisk.execution import (
     execute_split,
     logical_call_id,
     predecessor_gate_for_policy,
-    r4_canary_artifact_passed,
+    r5_canary_artifact_passed,
 )
 
 __all__ = [
@@ -15,5 +15,5 @@ __all__ = [
     "execute_split",
     "logical_call_id",
     "predecessor_gate_for_policy",
-    "r4_canary_artifact_passed",
+    "r5_canary_artifact_passed",
 ]

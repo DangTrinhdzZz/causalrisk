@@ -2,13 +2,13 @@
 
 **Decision date:** 2026-09-11
 
-**Status:** approved and retained by Amendment 007 execution revision R4
+**Status:** historical for R1-R4; not active in the Amendment 008 R5 roster
 
-**Applies before:** any CLadder smoke, calibration, or locked-test inference
+**Applied before:** R1-R4 CLadder operational canaries
 
 ## 1. Decision
 
-NVIDIA NIM remains in the execution roster as the skeptical Critic. Its
+For R1-R4, NVIDIA NIM remained in the execution roster as the skeptical Critic. Its
 selected endpoint is a free prototype endpoint without a comparable official
 token list price. NVIDIA is therefore recorded as
 `official_free_endpoint_unpriced`, with `normalized_list_cost_usd: null`,
@@ -50,11 +50,8 @@ normalized total.
 
 ## 4. Execution gate
 
-This pricing amendment does not itself authorize live API calls, CLadder
-execution, calibration, or locked-test inference. Amendment 007 retains
-`execution_enabled: true` in all six method configs while independently
-allowing live execution only for smoke under split-specific policy. Before any
-live canary, structural and execution preflight, inference-view validation,
-R3 lineage validation, and the existing runtime evidence gates must pass
-under this policy. NVIDIA's normalized price and actual charge remain `null`;
-neither zero nor a proxy price is permitted.
+This pricing amendment never authorized live API calls, CLadder execution,
+calibration, or locked-test inference. Amendment 008 excludes NVIDIA from the
+active R5 roster, so this waiver is not an R5 execution input. Historical R1-R4
+records retain `normalized_list_cost_usd: null`, `actual_charge_usd: null`, and
+`billing_mode: free_prototype`; neither zero nor a proxy price is permitted.

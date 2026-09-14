@@ -191,10 +191,14 @@ def validate_config(document: dict[str, Any], *, for_execution: bool = False) ->
             raise ConfigError("execution is blocked because execution_enabled is false")
         if _contains_placeholder(document):
             raise ConfigError("execution config contains a provisional placeholder")
-        if config_id.startswith("C3_") or config_id.startswith("C5_"):
-            families = document["model_family_assignment"].values()
-            if len(set(families)) != len(document["model_family_assignment"]):
-                raise ConfigError("heterogeneous council roles must use distinct model families")
+        families = document["model_family_assignment"]
+        if config_id == "C3_COUNCIL_V1" and len(set(families.values())) != 3:
+            raise ConfigError("C3 role-heterogeneous council must use three model families")
+        if config_id == "C5_COUNCIL_V1" and (
+            len(set(families.values())) != 4
+            or families["graph_identification_critic"] != families["formal_numerical_critic"]
+        ):
+            raise ConfigError("C5 role-heterogeneous council must use five agents across four model families")
 
 
 def load_config(path: str | Path, *, for_execution: bool = False) -> MethodConfig:
