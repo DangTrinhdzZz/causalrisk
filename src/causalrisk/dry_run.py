@@ -84,7 +84,7 @@ def _verify_source_manifest(root: Path, split: str) -> str:
     return digest
 
 
-def _r2_artifact_state(path: Path) -> str:
+def _r3_artifact_state(path: Path) -> str:
     if not path.exists():
         return "create"
     manifest_path = path / "manifest.json"
@@ -147,7 +147,7 @@ def build_execution_dry_run(
     config_sha256: dict[str, str] = {}
     artifact_root = root / "artifacts" / "runs"
     run_path = artifact_root / policy.run_id
-    run_action = _r2_artifact_state(run_path)
+    run_action = _r3_artifact_state(run_path)
     for config_id in METHOD_ORDER:
         path = root / "configs" / "methods" / f"{config_id}.yaml"
         config = load_config(path, for_execution=True)

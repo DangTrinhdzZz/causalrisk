@@ -17,7 +17,9 @@ This directory will contain the documents that define and govern the study:
 - `amendment_003_nvidia_pricing_policy.md`: symbolic-null NVIDIA pricing waiver and accounting rules.
 - `amendment_004_controlled_smoke_enablement.md`: smoke-only enablement, live canary sequencing, and pass gates.
 - `amendment_005_cross_split_execution_remediation.md`: frozen R1 failure analysis, narrow remediation, and the cross-split R2 execution contract.
+- `amendment_006_r3_output_cap_remediation.md`: frozen R2 failure lineage and the narrow R3 output-cap synchronization.
 - `r1_operational_canary_forensic_aggregate.json`: label-free operational aggregate for the immutable failed R1 canary.
+- `r2_operational_canary_forensic_aggregate.json`: label-free operational aggregate for the immutable failed R2 canary.
 - `day2_runtime_readiness.md`: current offline readiness, capacity, and phase-gate status.
 - `provider_smoke_runbook.md`: one-provider-at-a-time, non-CLadder runtime-verification procedure.
 

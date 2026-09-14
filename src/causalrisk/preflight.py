@@ -10,7 +10,7 @@ from pathlib import Path
 from causalrisk.capacity import CapacityError, build_capacity_plan, load_provider_limits
 from causalrisk.config import ConfigError, load_config, validate_config
 from causalrisk.execution_policy import MINIMUM_INTERVAL_SECONDS, get_execution_policy
-from causalrisk.lineage import verify_r1_remediation_input
+from causalrisk.lineage import verify_r2_remediation_input
 from causalrisk.pricing import PricingError, load_pricing, missing_official_prices, waiver_allows_unpriced_provider
 from causalrisk.prompts import file_sha256, load_prompt_bundle
 from causalrisk.providers.candidates import PROVIDER_CANDIDATES
@@ -134,30 +134,16 @@ def run_preflight(
         except (OSError, ValueError) as error:
             checks.append(PreflightCheck(path.stem, False, str(error)))
 
-    analyst_caps_match = bool(loaded_configs) and all(
-        values["max_output_tokens"]["analyst"] == 2048
+    output_caps_match = bool(loaded_configs) and all(
+        cap == 2048
         for values in loaded_configs.values()
-        if "analyst" in values.get("max_output_tokens", {})
-    )
-    other_caps_match = bool(
-        loaded_configs.get("C3_COUNCIL_V1")
-        and loaded_configs["C3_COUNCIL_V1"]["max_output_tokens"]
-        == {"analyst": 2048, "critic": 1024, "adjudicator": 768}
-        and loaded_configs.get("C5_COUNCIL_V1")
-        and loaded_configs["C5_COUNCIL_V1"]["max_output_tokens"]
-        == {
-            "analyst": 2048,
-            "semantic_query_critic": 1024,
-            "graph_identification_critic": 1024,
-            "formal_numerical_critic": 1024,
-            "adjudicator": 768,
-        }
+        for cap in values.get("max_output_tokens", {}).values()
     )
     checks.append(
         PreflightCheck(
-            "analyst_output_cap",
-            analyst_caps_match and other_caps_match,
-            "all analyst mirrors use 2048; every non-analyst cap is unchanged",
+            "uniform_output_cap",
+            output_caps_match,
+            "every configured call-producing role uses max_output_tokens=2048",
         )
     )
     checks.append(
@@ -213,12 +199,12 @@ def run_preflight(
         else:
             checks.append(PreflightCheck("projected_provider_capacity", False, "provider limits unavailable"))
         if execution_split == "smoke":
-            r1_intact = verify_r1_remediation_input(root / "artifacts/runs")
+            r2_intact = verify_r2_remediation_input(root / "artifacts/runs")
             checks.append(
                 PreflightCheck(
-                    "r1_immutable_remediation_lineage",
-                    r1_intact,
-                    "R1 frozen failed tree checksum matches Amendment 005" if r1_intact else "R1 lineage mismatch",
+                    "r2_immutable_remediation_lineage",
+                    r2_intact,
+                    "R2 frozen failed tree checksum matches Amendment 006" if r2_intact else "R2 lineage mismatch",
                 )
             )
         waiver_failures = []

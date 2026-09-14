@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "report_kind": "label_free_operational_forensic_aggregate",
+  "run_id": "cladder-smoke-canary-3-r2",
+  "benchmark_result": false,
+  "correctness_analyzed": false,
+  "raw_prompt_included": false,
+  "raw_output_included": false,
+  "item_membership_included": false,
+  "artifact_integrity": {
+    "file_count": 31,
+    "artifact_tree_sha256": "53aa427f2941b106018bf818971985d665a7c59ee94a185277b2ddf01943422d",
+    "manifest_sha256": "c8b78f1ef5f853e0443cb88a6d9d596446f1490d288cdd3c5a085b035744b4ce",
+    "summary_sha256": "824d9c04f3e3b787f8126f0de506763de30025ccf9036ffd096f253d4d05babe",
+    "freeze_state": "frozen",
+    "run_status": "failed",
+    "ambiguous_in_flight_attempts": 0,
+    "secret_or_authorization_keys": 0
+  },
+  "completion": {
+    "expected_logical_calls": 51,
+    "successful_logical_calls": 10,
+    "terminal_failure_calls": 1,
+    "transport_attempts": 11
+  },
+  "terminal_failure": {
+    "config_id": "C3_COUNCIL_V1",
+    "role": "critic",
+    "provider": "nvidia_nim",
+    "model_id": "nvidia/nemotron-3.5-lightning-30b-a3b",
+    "configured_max_output_tokens": 1024,
+    "failure_type": "configuration/output_cap_truncation",
+    "http_status": 200,
+    "finish_reason": "length",
+    "input_tokens": 860,
+    "output_tokens": 1024,
+    "reasoning_tokens": null,
+    "cached_input_tokens": null,
+    "total_tokens": 1884,
+    "normalized_list_cost_usd": null,
+    "actual_charge_usd": null,
+    "billing_mode": "free_prototype"
+  }
+}

@@ -21,8 +21,8 @@ roles: [analyst, critic, adjudicator]
 temperature: 0.0
 max_output_tokens:
   analyst: 2048
-  critic: 1024
-  adjudicator: 768
+  critic: 2048
+  adjudicator: 2048
 seed: null
 retry_policy_ref: docs/retry_policy.md
 retry_policy_sha256: 78c859c8910c2f3c1179859bf8c64cab2b6a70483a53ee75dfdf2c619e893797
@@ -39,4 +39,4 @@ allow_symbolic_unpriced_provider:
   source_url: https://build.nvidia.com/nvidia/nemotron-3.5-lightning-30b-a3b
   effective_date: "2026-09-11"
   reason: NVIDIA publishes a free prototype endpoint but no comparable official token list price.
-notes: R2 mechanics apply cross-split; NVIDIA pricing remains governed by Amendment 003.
+notes: R3 standardizes all call-producing roles at 2048; NVIDIA pricing remains governed by Amendment 003.

@@ -10,7 +10,8 @@ from causalrisk.controller import (
     PacingPolicy,
     execute_split,
     logical_call_id,
-    r2_canary_artifact_passed,
+    predecessor_gate_for_policy,
+    r3_canary_artifact_passed,
 )
 from causalrisk.data import LabelFreeItem
 from causalrisk.execution import _atomic_create_json
@@ -35,7 +36,7 @@ CONFIGS = tuple(load_config(ROOT / "configs/methods" / f"{config_id}.yaml") for 
 
 
 @dataclass
-class R2FakeAdapter:
+class R3FakeAdapter:
     name: str
     events: list = field(default_factory=list)
     truncate: bool = False
@@ -84,7 +85,7 @@ class R2FakeAdapter:
         )
 
 
-def policy(item_count=2, run_id="test-r2-run"):
+def policy(item_count=2, run_id="test-r3-run"):
     return SplitExecutionPolicy(
         split="smoke",
         item_count=item_count,
@@ -120,7 +121,7 @@ def items(count=2):
 def adapters(*, truncate_provider=None):
     events = []
     result = {
-        provider: R2FakeAdapter(provider, events, truncate=provider == truncate_provider)
+        provider: R3FakeAdapter(provider, events, truncate=provider == truncate_provider)
         for provider in ("groq", "nvidia_nim", "gemini", "cloudflare_workers_ai", "openai")
     }
     return result, events
@@ -162,7 +163,7 @@ def test_split_specific_authorization_and_disabled_phases_make_zero_calls(tmp_pa
                 authorization_flag=SPLIT_POLICIES[split].authorization_flag,
             )
     assert sum(adapter.calls for adapter in fake_adapters.values()) == 0
-    assert not (tmp_path / "test-r2-run").exists()
+    assert not (tmp_path / "test-r3-run").exists()
 
 
 def test_item_major_planned_pause_and_deterministic_resume_without_recalling(tmp_path):
@@ -242,7 +243,7 @@ def test_output_cap_is_terminal_and_failure_keeps_observability(tmp_path):
     fake_adapters, _events = adapters(truncate_provider="groq")
     with pytest.raises(RuntimeError, match="terminal-error threshold"):
         invoke(tmp_path, selected_adapters=fake_adapters)
-    run_dir = tmp_path / "test-r2-run"
+    run_dir = tmp_path / "test-r3-run"
     manifest = json.loads((run_dir / "manifest.json").read_text(encoding="utf-8"))
     call = json.loads(next((run_dir / "calls/A1_SINGLE_V1").glob("*.json")).read_text(encoding="utf-8"))
     attempt = json.loads(next((run_dir / "attempts/A1_SINGLE_V1").glob("*.json")).read_text(encoding="utf-8"))
@@ -258,7 +259,7 @@ def test_output_cap_is_terminal_and_failure_keeps_observability(tmp_path):
 
 def test_success_artifacts_have_observability_and_nvidia_null_policy(tmp_path):
     invoke(tmp_path)
-    run_dir = tmp_path / "test-r2-run"
+    run_dir = tmp_path / "test-r3-run"
     attempts = [json.loads(path.read_text(encoding="utf-8")) for path in run_dir.glob("attempts/*/*.json")]
     calls = [json.loads(path.read_text(encoding="utf-8")) for path in run_dir.glob("calls/*/*.json")]
     required = {
@@ -291,7 +292,7 @@ def test_retry_after_and_backoff_history_are_preserved(tmp_path):
     fake_adapters["groq"].rate_limit_once = True
     sleeps = []
     invoke(tmp_path, selected_adapters=fake_adapters, sleep=sleeps.append)
-    run_dir = tmp_path / "test-r2-run"
+    run_dir = tmp_path / "test-r3-run"
     groq_calls = [
         json.loads(path.read_text(encoding="utf-8"))
         for path in run_dir.glob("calls/*/*.json")
@@ -306,14 +307,14 @@ def test_retry_after_and_backoff_history_are_preserved(tmp_path):
     assert 2.5 in sleeps
 
 
-def test_only_exact_complete_r2_canary_opens_gate(tmp_path):
+def test_only_exact_complete_r3_canary_opens_smoke_gate(tmp_path):
     fake_adapters, _events = adapters()
     canary_items = items(3)
     canary_lineage = lineage(
         selection_sha256="9" * 64,
         predecessor_gate={
-            "run_id": "cladder-smoke-canary-3",
-            "requirement": "frozen_failed_remediation_input",
+            "run_id": SMOKE_CANARY_POLICY.predecessor_run_id,
+            "requirement": SMOKE_CANARY_POLICY.predecessor_requirement,
             "verified": True,
         },
     )
@@ -324,22 +325,47 @@ def test_only_exact_complete_r2_canary_opens_gate(tmp_path):
         selected_adapters=fake_adapters,
         lineage=canary_lineage,
     )
-    assert r2_canary_artifact_passed(tmp_path)
-    assert not (tmp_path / "cladder-smoke-canary-3").exists()
+    assert r3_canary_artifact_passed(tmp_path)
+    assert not (tmp_path / "cladder-smoke-canary-3-r2").exists()
 
 
-def test_failed_r1_cannot_open_the_r2_smoke_gate(tmp_path):
-    r1 = tmp_path / "cladder-smoke-canary-3"
-    r1.mkdir()
-    (r1 / "manifest.json").write_text(
-        json.dumps({"run_id": "cladder-smoke-canary-3", "run_status": "failed", "freeze_state": "frozen"}),
+@pytest.mark.parametrize("legacy_run_id", ["cladder-smoke-canary-3", "cladder-smoke-canary-3-r2"])
+def test_r1_or_nonmatching_r2_cannot_open_the_r3_canary_gate(tmp_path, legacy_run_id):
+    legacy = tmp_path / legacy_run_id
+    legacy.mkdir()
+    (legacy / "manifest.json").write_text(
+        json.dumps({"run_id": legacy_run_id, "run_status": "failed", "freeze_state": "frozen"}),
         encoding="utf-8",
     )
-    (r1 / "summary.json").write_text(
-        json.dumps({"expected_logical_calls": 51, "completed_logical_calls": 27, "terminal_errors": 1}),
+    (legacy / "summary.json").write_text(
+        json.dumps({"expected_logical_calls": 51, "completed_logical_calls": 10, "terminal_errors": 1}),
         encoding="utf-8",
     )
-    assert not r2_canary_artifact_passed(tmp_path)
+    gate = predecessor_gate_for_policy(tmp_path, SMOKE_CANARY_POLICY)
+    assert gate["run_id"] == "cladder-smoke-canary-3-r2"
+    assert not gate["verified"]
+
+
+def test_wrong_predecessor_lineage_blocks_r3_canary_before_any_call(tmp_path):
+    fake_adapters, _events = adapters()
+    bad_lineage = lineage(
+        selection_sha256="9" * 64,
+        predecessor_gate={
+            "run_id": "cladder-smoke-canary-3",
+            "requirement": "frozen_failed_remediation_input",
+            "verified": True,
+        },
+    )
+    with pytest.raises(ValueError, match="predecessor gate"):
+        invoke(
+            tmp_path,
+            selected_policy=SMOKE_CANARY_POLICY,
+            selected_items=items(3),
+            selected_adapters=fake_adapters,
+            lineage=bad_lineage,
+        )
+    assert sum(adapter.calls for adapter in fake_adapters.values()) == 0
+    assert not (tmp_path / SMOKE_CANARY_POLICY.run_id).exists()
 
 
 def test_artifact_writer_rejects_secret_or_authorization_keys(tmp_path):
