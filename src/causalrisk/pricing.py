@@ -40,7 +40,7 @@ def load_pricing(path: str | Path) -> dict[str, Any]:
     retained_history = {
         f"{candidate.provider}:{candidate.model_id}"
         for candidate in PROVIDER_CANDIDATES.values()
-        if candidate.availability == "excluded_protocol_noncompliant"
+        if candidate.availability in {"excluded_protocol_noncompliant", "excluded_transient_unavailable_r5"}
     }
     if set(document.get("models", {})) != expected | retained_history:
         raise PricingError("pricing snapshot does not exactly match the active roster plus retained history")

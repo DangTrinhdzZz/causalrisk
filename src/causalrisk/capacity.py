@@ -42,7 +42,8 @@ def load_provider_limits(path: str | Path) -> dict[str, Any]:
         or not isinstance(document.get("effective_at"), str)
         or not isinstance(document.get("scope"), str)
         or not isinstance(providers, dict)
-        or set(providers) != set(PROVIDER_CALLS_PER_ITEM)
+        # The unchanged snapshot retains Gemini history; plans iterate only active providers.
+        or set(providers) != set(PROVIDER_CALLS_PER_ITEM) | {"gemini"}
     ):
         raise CapacityError("provider-limit snapshot header or roster is invalid")
     for provider, limits in providers.items():

@@ -19,6 +19,10 @@ from causalrisk.execution_policy import (
     R4_ARTIFACT_TREE_SHA256,
     R4_MANIFEST_SHA256,
     R4_RUN_ID,
+    R5_ARTIFACT_TREE_SHA256,
+    R5_MANIFEST_SHA256,
+    R5_RUN_ID,
+    R5_SUMMARY_SHA256,
 )
 
 
@@ -103,3 +107,32 @@ def verify_r4_remediation_input(artifact_root: str | Path) -> bool:
         and file_sha256_bytes(manifest_path) == R4_MANIFEST_SHA256
         and artifact_tree_sha256(run_dir) == R4_ARTIFACT_TREE_SHA256
     )
+
+
+def verify_r5_remediation_input(artifact_root: str | Path) -> bool:
+    """Require all three exact R5 hashes and its frozen operational failure state."""
+    run_dir = Path(artifact_root) / R5_RUN_ID
+    manifest_path = run_dir / "manifest.json"
+    summary_path = run_dir / "summary.json"
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        summary = json.loads(summary_path.read_text(encoding="utf-8"))
+        return bool(
+            isinstance(manifest, dict)
+            and isinstance(summary, dict)
+            and manifest.get("run_id") == R5_RUN_ID
+            and manifest.get("execution_revision") == "cross_split_execution_r5"
+            and manifest.get("freeze_state") == "frozen"
+            and manifest.get("run_status") == "failed"
+            and summary.get("run_id") == R5_RUN_ID
+            and summary.get("expected_logical_calls") == 51
+            and summary.get("completed_logical_calls") == 30
+            and summary.get("terminal_errors") == 1
+            and summary.get("transport_attempts") == 34
+            and summary.get("failure_type") == "provider/http_5xx"
+            and file_sha256_bytes(manifest_path) == R5_MANIFEST_SHA256
+            and file_sha256_bytes(summary_path) == R5_SUMMARY_SHA256
+            and artifact_tree_sha256(run_dir) == R5_ARTIFACT_TREE_SHA256
+        )
+    except (OSError, ValueError):
+        return False

@@ -2,22 +2,22 @@ schema_version: 1
 config_id: C5_COUNCIL_V1
 method_family: heterogeneous_council
 call_budget: 5
-provider_pool: [groq, gemini, cloudflare_workers_ai, openai]
+provider_pool: [groq, cloudflare_workers_ai, openai]
 provider_assignment:
   analyst: groq
-  semantic_query_critic: gemini
+  semantic_query_critic: cloudflare_workers_ai
   graph_identification_critic: cloudflare_workers_ai
   formal_numerical_critic: cloudflare_workers_ai
   adjudicator: openai
 model_assignment:
   analyst: openai/gpt-oss-120b
-  semantic_query_critic: gemini-3.8-flash
+  semantic_query_critic: "@cf/qwen/qwen3-30b-a3b-fp8"
   graph_identification_critic: "@cf/qwen/qwen3-30b-a3b-fp8"
   formal_numerical_critic: "@cf/qwen/qwen3-30b-a3b-fp8"
   adjudicator: gpt-5.6-terra
 model_family_assignment:
   analyst: gpt-oss
-  semantic_query_critic: gemini-3.8
+  semantic_query_critic: qwen3
   graph_identification_critic: qwen3
   formal_numerical_critic: qwen3
   adjudicator: gpt-5.6
@@ -42,4 +42,4 @@ expose_gold_label: false
 expose_metadata: false
 runtime_verified: true
 execution_enabled: true
-notes: R5 final five-agent, four-family role-heterogeneous council; the two Cloudflare Qwen critics remain independent calls.
+notes: R6 five-agent, three-family role-heterogeneous council; all three Cloudflare Qwen critics are independent calls.

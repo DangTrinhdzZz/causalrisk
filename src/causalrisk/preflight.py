@@ -10,7 +10,7 @@ from pathlib import Path
 from causalrisk.capacity import CapacityError, build_capacity_plan, load_provider_limits
 from causalrisk.config import ConfigError, load_config, validate_config
 from causalrisk.execution_policy import MINIMUM_INTERVAL_SECONDS, get_execution_policy
-from causalrisk.lineage import verify_r4_remediation_input
+from causalrisk.lineage import verify_r5_remediation_input
 from causalrisk.pricing import PricingError, load_pricing, missing_official_prices, waiver_allows_unpriced_provider
 from causalrisk.prompts import file_sha256, load_prompt_bundle
 from causalrisk.providers.candidates import PROVIDER_CANDIDATES
@@ -204,12 +204,13 @@ def run_preflight(
         else:
             checks.append(PreflightCheck("projected_provider_capacity", False, "provider limits unavailable"))
         if execution_split == "smoke":
-            r4_intact = verify_r4_remediation_input(root / "artifacts/runs")
+            r5_intact = verify_r5_remediation_input(root / "artifacts/runs")
             checks.append(
                 PreflightCheck(
-                    "r4_immutable_remediation_lineage",
-                    r4_intact,
-                    "R4 frozen failed tree checksum matches Amendment 008" if r4_intact else "R4 lineage mismatch",
+                    "r5_immutable_remediation_lineage",
+                    r5_intact,
+                    "R5 frozen failed manifest/tree/summary match Amendment 009"
+                    if r5_intact else "R5 lineage mismatch",
                 )
             )
         execution_pricing_keys = {
@@ -238,7 +239,7 @@ def run_preflight(
                 (
                     "pricing snapshot unavailable"
                     if pricing is None
-                    else "all R5 execution models have normalized list prices"
+                    else "all R6 execution models have normalized list prices"
                     if not execution_missing_prices
                     else "explicit NVIDIA symbolic-pricing waiver accepted"
                     if not waiver_failures
@@ -277,6 +278,7 @@ def run_preflight(
         and c3["provider_assignment"]["analyst"] == c5["provider_assignment"]["analyst"]
         and c3["provider_assignment"]["critic"] == c5["provider_assignment"]["graph_identification_critic"]
         and c3["provider_assignment"]["adjudicator"] == c5["provider_assignment"]["adjudicator"]
+        and c5["provider_assignment"]["semantic_query_critic"] == "cloudflare_workers_ai"
         and c5["provider_assignment"]["graph_identification_critic"] == "cloudflare_workers_ai"
         and c5["provider_assignment"]["formal_numerical_critic"] == "cloudflare_workers_ai"
         and set(c3["provider_assignment"].values()).issubset(set(c5["provider_assignment"].values()))
@@ -286,17 +288,23 @@ def run_preflight(
         PreflightCheck(
             "amended_roster_consistency",
             roster_matches,
-            "C3 is nested in the five-agent, four-family role-heterogeneous C5 roster"
+            "C3 is nested in the five-agent, three-family role-heterogeneous C5 roster"
             if roster_matches
             else "roster mapping differs",
         )
     )
     mistral = PROVIDER_CANDIDATES.get("mistral")
     nvidia = PROVIDER_CANDIDATES.get("nvidia_nim")
+    gemini = PROVIDER_CANDIDATES.get("gemini")
     provider_policy_matches = bool(
         mistral
         and mistral.primary is False
         and mistral.availability == "excluded_unavailable"
+        and gemini
+        and gemini.primary is False
+        and gemini.availability == "excluded_transient_unavailable_r5"
+        and isinstance(gemini.reason, str)
+        and all(detail in gemini.reason for detail in ("R5", "four attempts (0-3)", "HTTP 503/UNAVAILABLE"))
         and nvidia
         and nvidia.primary is False
         and nvidia.availability == "excluded_protocol_noncompliant"
@@ -309,6 +317,7 @@ def run_preflight(
             "provider_availability_policy",
             provider_policy_matches,
             (
+                "Gemini excluded_transient_unavailable_r5; "
                 "Mistral excluded_unavailable; NVIDIA NIM excluded_protocol_noncompliant"
                 if provider_policy_matches
                 else "provider availability or role policy differs"

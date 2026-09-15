@@ -2,7 +2,7 @@ schema_version: 1
 config_id: A1_SINGLE_V1
 method_family: single_agent
 call_budget: 1
-provider_pool: [groq, gemini, cloudflare_workers_ai, openai]
+provider_pool: [groq, cloudflare_workers_ai, openai]
 provider_assignment:
   analyst: groq
 model_assignment:
@@ -26,4 +26,4 @@ expose_gold_label: false
 expose_metadata: false
 runtime_verified: true
 execution_enabled: true
-notes: R5 final execution roster; only smoke may be separately live-authorized under Amendment 008.
+notes: R6 execution roster; only smoke may be separately live-authorized under Amendment 009.

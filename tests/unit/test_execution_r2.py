@@ -1,4 +1,5 @@
 import json
+import shutil
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 
@@ -11,13 +12,14 @@ from causalrisk.controller import (
     execute_split,
     logical_call_id,
     predecessor_gate_for_policy,
-    r5_canary_artifact_passed,
+    r6_canary_artifact_passed,
 )
 from causalrisk.data import LabelFreeItem
 from causalrisk.execution import _atomic_create_json
 from causalrisk.execution_policy import (
     METHOD_ORDER,
     MINIMUM_INTERVAL_SECONDS,
+    R5_RUN_ID,
     SMOKE_CANARY_POLICY,
     SOURCE_MANIFEST_SHA256,
     SPLIT_POLICIES,
@@ -36,7 +38,7 @@ CONFIGS = tuple(load_config(ROOT / "configs/methods" / f"{config_id}.yaml") for 
 
 
 @dataclass
-class R5FakeAdapter:
+class R6FakeAdapter:
     name: str
     events: list = field(default_factory=list)
     truncate: bool = False
@@ -85,7 +87,7 @@ class R5FakeAdapter:
         )
 
 
-def policy(item_count=2, run_id="test-r5-run"):
+def policy(item_count=2, run_id="test-r6-run"):
     return SplitExecutionPolicy(
         split="smoke",
         item_count=item_count,
@@ -121,8 +123,8 @@ def items(count=2):
 def adapters(*, truncate_provider=None):
     events = []
     result = {
-        provider: R5FakeAdapter(provider, events, truncate=provider == truncate_provider)
-        for provider in ("groq", "gemini", "cloudflare_workers_ai", "openai")
+        provider: R6FakeAdapter(provider, events, truncate=provider == truncate_provider)
+        for provider in ("groq", "cloudflare_workers_ai", "openai")
     }
     return result, events
 
@@ -163,7 +165,7 @@ def test_split_specific_authorization_and_disabled_phases_make_zero_calls(tmp_pa
                 authorization_flag=SPLIT_POLICIES[split].authorization_flag,
             )
     assert sum(adapter.calls for adapter in fake_adapters.values()) == 0
-    assert not (tmp_path / "test-r5-run").exists()
+    assert not (tmp_path / "test-r6-run").exists()
 
 
 def test_item_major_planned_pause_and_deterministic_resume_without_recalling(tmp_path):
@@ -243,7 +245,7 @@ def test_output_cap_is_terminal_and_failure_keeps_observability(tmp_path):
     fake_adapters, _events = adapters(truncate_provider="groq")
     with pytest.raises(RuntimeError, match="terminal-error threshold"):
         invoke(tmp_path, selected_adapters=fake_adapters)
-    run_dir = tmp_path / "test-r5-run"
+    run_dir = tmp_path / "test-r6-run"
     manifest = json.loads((run_dir / "manifest.json").read_text(encoding="utf-8"))
     call = json.loads(next((run_dir / "calls/A1_SINGLE_V1").glob("*.json")).read_text(encoding="utf-8"))
     attempt = json.loads(next((run_dir / "attempts/A1_SINGLE_V1").glob("*.json")).read_text(encoding="utf-8"))
@@ -257,9 +259,9 @@ def test_output_cap_is_terminal_and_failure_keeps_observability(tmp_path):
         invoke(tmp_path, selected_adapters=adapters()[0])
 
 
-def test_success_artifacts_have_observability_and_only_priced_r5_providers(tmp_path):
+def test_success_artifacts_have_observability_and_only_priced_r6_providers(tmp_path):
     invoke(tmp_path)
-    run_dir = tmp_path / "test-r5-run"
+    run_dir = tmp_path / "test-r6-run"
     attempts = [json.loads(path.read_text(encoding="utf-8")) for path in run_dir.glob("attempts/*/*.json")]
     calls = [json.loads(path.read_text(encoding="utf-8")) for path in run_dir.glob("calls/*/*.json")]
     required = {
@@ -287,7 +289,7 @@ def test_retry_after_and_backoff_history_are_preserved(tmp_path):
     fake_adapters["groq"].rate_limit_once = True
     sleeps = []
     invoke(tmp_path, selected_adapters=fake_adapters, sleep=sleeps.append)
-    run_dir = tmp_path / "test-r5-run"
+    run_dir = tmp_path / "test-r6-run"
     groq_calls = [
         json.loads(path.read_text(encoding="utf-8"))
         for path in run_dir.glob("calls/*/*.json")
@@ -302,16 +304,13 @@ def test_retry_after_and_backoff_history_are_preserved(tmp_path):
     assert 2.5 in sleeps
 
 
-def test_only_exact_complete_r5_canary_opens_smoke_gate(tmp_path):
+def test_only_exact_complete_r6_canary_opens_smoke_gate(tmp_path):
+    shutil.copytree(ROOT / "artifacts/runs" / R5_RUN_ID, tmp_path / R5_RUN_ID)
     fake_adapters, _events = adapters()
     canary_items = items(3)
     canary_lineage = lineage(
         selection_sha256="9" * 64,
-        predecessor_gate={
-            "run_id": SMOKE_CANARY_POLICY.predecessor_run_id,
-            "requirement": SMOKE_CANARY_POLICY.predecessor_requirement,
-            "verified": True,
-        },
+        predecessor_gate=predecessor_gate_for_policy(tmp_path, SMOKE_CANARY_POLICY),
     )
     invoke(
         tmp_path,
@@ -320,7 +319,7 @@ def test_only_exact_complete_r5_canary_opens_smoke_gate(tmp_path):
         selected_adapters=fake_adapters,
         lineage=canary_lineage,
     )
-    assert r5_canary_artifact_passed(tmp_path)
+    assert r6_canary_artifact_passed(tmp_path)
     assert not (tmp_path / "cladder-smoke-canary-3-r4").exists()
 
 
@@ -331,9 +330,10 @@ def test_only_exact_complete_r5_canary_opens_smoke_gate(tmp_path):
         "cladder-smoke-canary-3-r2",
         "cladder-smoke-canary-3-r3",
         "cladder-smoke-canary-3-r4",
+        "cladder-smoke-canary-3-r5",
     ],
 )
-def test_prior_or_nonmatching_r4_artifact_cannot_open_the_r5_canary_gate(tmp_path, legacy_run_id):
+def test_prior_or_nonmatching_r5_artifact_cannot_open_the_r6_canary_gate(tmp_path, legacy_run_id):
     legacy = tmp_path / legacy_run_id
     legacy.mkdir()
     (legacy / "manifest.json").write_text(
@@ -345,11 +345,11 @@ def test_prior_or_nonmatching_r4_artifact_cannot_open_the_r5_canary_gate(tmp_pat
         encoding="utf-8",
     )
     gate = predecessor_gate_for_policy(tmp_path, SMOKE_CANARY_POLICY)
-    assert gate["run_id"] == "cladder-smoke-canary-3-r4"
+    assert gate["run_id"] == "cladder-smoke-canary-3-r5"
     assert not gate["verified"]
 
 
-def test_wrong_predecessor_lineage_blocks_r5_canary_before_any_call(tmp_path):
+def test_wrong_predecessor_lineage_blocks_r6_canary_before_any_call(tmp_path):
     fake_adapters, _events = adapters()
     bad_lineage = lineage(
         selection_sha256="9" * 64,
@@ -375,3 +375,111 @@ def test_artifact_writer_rejects_secret_or_authorization_keys(tmp_path):
     with pytest.raises(ValueError, match="secret-bearing"):
         _atomic_create_json(tmp_path / "bad.json", {"authorization": "must-not-write"})
     assert not (tmp_path / "bad.json").exists()
+
+
+def test_forged_verified_r5_gate_cannot_start_r6_without_exact_disk_lineage(tmp_path):
+    fake_adapters, events = adapters()
+    real_gate = predecessor_gate_for_policy(ROOT / "artifacts/runs", SMOKE_CANARY_POLICY)
+    assert real_gate["verified"]
+    with pytest.raises(ValueError, match="exact predecessor gate on disk"):
+        invoke(tmp_path, selected_policy=SMOKE_CANARY_POLICY, selected_items=items(3),
+               selected_adapters=fake_adapters,
+               lineage=lineage(selection_sha256="9" * 64, predecessor_gate=real_gate))
+    assert not events
+    assert not (tmp_path / SMOKE_CANARY_POLICY.run_id).exists()
+
+
+@pytest.mark.parametrize("selected_policy", [
+    replace(SMOKE_CANARY_POLICY, predecessor_run_id="forged-r5"),
+    replace(SPLIT_POLICIES["calibration"], live_authorized=True),
+    replace(SPLIT_POLICIES["locked_test"], live_authorized=True),
+])
+def test_fixed_run_ids_cannot_override_lineage_or_phase_authorization(tmp_path, selected_policy):
+    fake_adapters, events = adapters()
+    with pytest.raises(ValueError, match="fixed execution policy"):
+        invoke(tmp_path, selected_policy=selected_policy, selected_adapters=fake_adapters)
+    assert not events
+    assert not (tmp_path / selected_policy.run_id).exists()
+
+
+@pytest.mark.parametrize("drift", ["missing", "failed", "incomplete", "terminal_error", "missing_call"])
+def test_r6_smoke_gate_rejects_missing_failed_or_incomplete_canary(tmp_path, drift):
+    shutil.copytree(ROOT / "artifacts/runs" / R5_RUN_ID, tmp_path / R5_RUN_ID)
+    if drift != "missing":
+        invoke(tmp_path, selected_policy=SMOKE_CANARY_POLICY, selected_items=items(3),
+               lineage=lineage(selection_sha256="9" * 64,
+                               predecessor_gate=predecessor_gate_for_policy(tmp_path, SMOKE_CANARY_POLICY)))
+        assert r6_canary_artifact_passed(tmp_path)
+        run_dir = tmp_path / SMOKE_CANARY_POLICY.run_id
+        if drift == "missing_call":
+            next(run_dir.glob("calls/*/*.json")).unlink()
+        else:
+            path = run_dir / ("manifest.json" if drift == "failed" else "summary.json")
+            record = json.loads(path.read_text(encoding="utf-8"))
+            if drift == "failed":
+                record["run_status"] = "failed"
+            elif drift == "incomplete":
+                record["completed_logical_calls"] = 50
+            else:
+                record["terminal_errors"] = 1
+            path.write_text(json.dumps(record), encoding="utf-8")
+    assert not r6_canary_artifact_passed(tmp_path)
+    assert not predecessor_gate_for_policy(tmp_path, SPLIT_POLICIES["smoke"])["verified"]
+    fake_adapters, events = adapters()
+    forged_gate = {"run_id": SMOKE_CANARY_POLICY.run_id,
+                   "requirement": SPLIT_POLICIES["smoke"].predecessor_requirement, "verified": True}
+    with pytest.raises(ValueError, match="exact predecessor gate on disk"):
+        invoke(tmp_path, selected_policy=SPLIT_POLICIES["smoke"], selected_items=items(60),
+               selected_adapters=fake_adapters, lineage=lineage(predecessor_gate=forged_gate))
+    assert not events
+    assert not (tmp_path / SPLIT_POLICIES["smoke"].run_id).exists()
+
+
+def test_three_c5_cloudflare_calls_do_not_reuse_outputs(tmp_path):
+    class DistinctCards(R6FakeAdapter):
+        def complete(self, request):
+            response = super().complete(request)
+            return replace(response, text=f"Independent card {self.calls}\nYES")
+
+    fake_adapters, events = adapters()
+    fake_adapters["cloudflare_workers_ai"] = DistinctCards("cloudflare_workers_ai", events)
+    result = invoke(tmp_path, selected_policy=policy(item_count=1), selected_items=items(1),
+                    selected_adapters=fake_adapters)
+    assert result["completed_logical_calls"] == 17
+    run_dir = tmp_path / "test-r6-run"
+    records = [json.loads(p.read_text(encoding="utf-8")) for p in run_dir.glob("calls/C5_COUNCIL_V1/*.json")]
+    critics = [record for record in records if record["provider"] == "cloudflare_workers_ai"]
+    assert {record["role"] for record in critics} == {
+        "semantic_query_critic", "graph_identification_critic", "formal_numerical_critic"
+    }
+    assert {record["topology_position"] for record in critics} == {1, 2, 3}
+    assert len({record["call_id"] for record in critics}) == len({record["raw_output"] for record in critics}) == 3
+    critic_prompts = [event[2] for event in events[13:16]]
+    assert len(set(critic_prompts)) == 3
+    assert not any(record["raw_output"] in prompt for record in critics for prompt in critic_prompts)
+    assert all(record["raw_output"] in events[16][2] for record in critics)
+    assert not (run_dir / "calls/C1_BOUNDARY_V1").exists()
+
+
+def test_r6_unavailable_provider_retries_same_route_then_stops_without_fallback(tmp_path):
+    class Unavailable(R6FakeAdapter):
+        def complete(self, request):
+            self.calls += 1
+            self.events.append((self.name, request.model_id, request.prompt))
+            raise ClassifiedFailure("provider/http_5xx", "unavailable", http_status=503)
+
+    fake_adapters, events = adapters()
+    fake_adapters["cloudflare_workers_ai"] = Unavailable("cloudflare_workers_ai", events)
+    sleeps = []
+    with pytest.raises(RuntimeError, match="terminal-error threshold"):
+        invoke(tmp_path, selected_adapters=fake_adapters, sleep=sleeps.append)
+    assert fake_adapters["cloudflare_workers_ai"].calls == 4
+    assert fake_adapters["groq"].calls == 10
+    assert fake_adapters["openai"].calls == 0
+    assert len(events) == 14
+    assert len(set(events[-4:])) == 1
+    assert all(seconds in sleeps for seconds in (1.0, 2.0, 4.0))
+    run_dir = tmp_path / "test-r6-run"
+    manifest = json.loads((run_dir / "manifest.json").read_text(encoding="utf-8"))
+    assert manifest["limits"]["max_terminal_errors"] == 0
+    assert (manifest["freeze_state"], manifest["run_status"]) == ("frozen", "failed")

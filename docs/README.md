@@ -28,3 +28,7 @@ This directory will contain the documents that define and govern the study:
 - `provider_smoke_runbook.md`: one-provider-at-a-time, non-CLadder runtime-verification procedure.
 
 These documents will be written, reviewed, and frozen during Day 1. They are intentionally absent from the repository initialization so that provisional choices are not represented as settled protocol decisions.
+
+- `amendment_009_r6_post_stop_availability_remediation.md`: explicitly requested post-stop R6 revision, exact R5 lineage, Gemini availability exclusion, and no automatic R7.
+- `r5_operational_canary_forensic_aggregate.json`: label-free operational aggregate for the immutable failed R5 canary.
+- `r6_offline_validation.md`: offline R6 validation results, immutable-artifact checks, and phase-gate status.

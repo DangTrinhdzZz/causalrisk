@@ -195,10 +195,14 @@ def validate_config(document: dict[str, Any], *, for_execution: bool = False) ->
         if config_id == "C3_COUNCIL_V1" and len(set(families.values())) != 3:
             raise ConfigError("C3 role-heterogeneous council must use three model families")
         if config_id == "C5_COUNCIL_V1" and (
-            len(set(families.values())) != 4
-            or families["graph_identification_critic"] != families["formal_numerical_critic"]
+            len(set(families.values())) != 3
+            or not (
+                families["semantic_query_critic"]
+                == families["graph_identification_critic"]
+                == families["formal_numerical_critic"]
+            )
         ):
-            raise ConfigError("C5 role-heterogeneous council must use five agents across four model families")
+            raise ConfigError("C5 role-heterogeneous council must use five agents across three model families")
 
 
 def load_config(path: str | Path, *, for_execution: bool = False) -> MethodConfig:

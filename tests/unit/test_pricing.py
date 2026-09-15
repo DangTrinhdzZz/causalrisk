@@ -66,7 +66,7 @@ def test_symbolic_sensitivity_adds_assumed_nvidia_rates_without_changing_subtota
     assert symbolic_sensitivity_cost_usd(Decimal("0.001"), 1000, 500, Decimal("2"), Decimal("4")) == Decimal("0.005")
 
 
-def test_r5_execution_roster_has_full_normalized_pricing_coverage_when_usage_is_reported():
+def test_r6_execution_roster_has_full_normalized_pricing_coverage_when_usage_is_reported():
     pricing = load_pricing(ROOT / "configs/pricing_2026-09-11.json")
     missing = set(missing_official_prices(pricing))
     configs = [load_config(ROOT / "configs/methods" / f"{config_id}.yaml") for config_id in METHOD_ORDER]

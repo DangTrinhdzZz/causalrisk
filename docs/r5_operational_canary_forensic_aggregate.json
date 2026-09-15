@@ -1,0 +1,93 @@
+{
+  "schema_version": 1,
+  "report_kind": "label_free_operational_forensic_aggregate",
+  "run_id": "cladder-smoke-canary-3-r5",
+  "execution_revision": "cross_split_execution_r5",
+  "code_commit": "ff197cc27cbf3fa672c746a1ec9546518d939ba7",
+  "benchmark_result": false,
+  "correctness_analyzed": false,
+  "raw_prompt_included": false,
+  "raw_output_included": false,
+  "item_membership_included": false,
+  "artifact_integrity": {
+    "file_count": 74,
+    "artifact_tree_sha256": "2ef7b14410349942a63cb4400bb26e347b57a961400788d83ddd1e1d5c5468d0",
+    "manifest_sha256": "60475269e6b507c891b16ef02a44ba2672ba0683d7b0d64975ef9be8b4f246f6",
+    "summary_sha256": "81b1db961d00368f755a554047ef1e596186941a4f4733af1f6b9bcfcdde37a1",
+    "freeze_state": "frozen",
+    "run_status": "failed",
+    "ambiguous_in_flight_attempts": 0,
+    "secret_or_authorization_keys": 0
+  },
+  "completion": {
+    "expected_logical_calls": 51,
+    "successful_logical_calls": 30,
+    "terminal_failure_calls": 1,
+    "transport_attempts": 34,
+    "successful_provider_calls": {
+      "cloudflare_workers_ai": 4,
+      "gemini": 1,
+      "groq": 22,
+      "openai": 3
+    }
+  },
+  "terminal_failure": {
+    "call_id": "c265b9d6eb558b1a25de9ae393bdb0d9",
+    "config_id": "C5_COUNCIL_V1",
+    "role": "semantic_query_critic",
+    "topology_position": 1,
+    "provider": "gemini",
+    "model_id": "gemini-3.8-flash",
+    "failure_type": "provider/http_5xx",
+    "http_status": 503,
+    "retry_count": 3,
+    "configured_max_output_tokens": 2048,
+    "attempt_chain": [
+      {
+        "attempt_index": 0,
+        "status": "failure",
+        "http_status": 503,
+        "failure_code": "provider/http_5xx",
+        "provider_error_code": "503",
+        "provider_error_type": "UNAVAILABLE",
+        "backoff_seconds": 1.0,
+        "should_retry": true,
+        "resolution_action": "retry"
+      },
+      {
+        "attempt_index": 1,
+        "status": "failure",
+        "http_status": 503,
+        "failure_code": "provider/http_5xx",
+        "provider_error_code": "503",
+        "provider_error_type": "UNAVAILABLE",
+        "backoff_seconds": 2.0,
+        "should_retry": true,
+        "resolution_action": "retry"
+      },
+      {
+        "attempt_index": 2,
+        "status": "failure",
+        "http_status": 503,
+        "failure_code": "provider/http_5xx",
+        "provider_error_code": "503",
+        "provider_error_type": "UNAVAILABLE",
+        "backoff_seconds": 4.0,
+        "should_retry": true,
+        "resolution_action": "retry"
+      },
+      {
+        "attempt_index": 3,
+        "status": "failure",
+        "http_status": 503,
+        "failure_code": "provider/http_5xx",
+        "provider_error_code": "503",
+        "provider_error_type": "UNAVAILABLE",
+        "backoff_seconds": 0.0,
+        "should_retry": false,
+        "resolution_action": "fail_item"
+      }
+    ]
+  },
+  "interpretation": "Provider availability failure; valid model ID; no model-quality, causal-reasoning, prompt, gold-label, or accuracy conclusion."
+}

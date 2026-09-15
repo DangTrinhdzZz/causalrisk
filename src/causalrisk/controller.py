@@ -6,7 +6,7 @@ from causalrisk.execution import (
     execute_split,
     logical_call_id,
     predecessor_gate_for_policy,
-    r5_canary_artifact_passed,
+    r6_canary_artifact_passed,
 )
 
 __all__ = [
@@ -15,5 +15,5 @@ __all__ = [
     "execute_split",
     "logical_call_id",
     "predecessor_gate_for_policy",
-    "r5_canary_artifact_passed",
+    "r6_canary_artifact_passed",
 ]

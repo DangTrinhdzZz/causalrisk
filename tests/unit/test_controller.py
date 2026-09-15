@@ -311,13 +311,13 @@ def test_ambiguous_in_flight_attempt_blocks_resume_without_call(tmp_path):
     assert adapter.calls == 0
 
 
-def test_final_r5_topology_cannot_open_the_legacy_r1_canary_gate(tmp_path):
+def test_final_r6_topology_cannot_open_the_legacy_r1_canary_gate(tmp_path):
     from causalrisk.pricing import load_pricing
 
     configs = tuple(reversed([load_config(path) for path in sorted((ROOT / "configs/methods").glob("*.yaml"))]))
     adapters = {
         provider: FakeAdapter(name=provider)
-        for provider in ("groq", "gemini", "cloudflare_workers_ai", "openai")
+        for provider in ("groq", "cloudflare_workers_ai", "openai")
     }
     execute_smoke(
         split="smoke",

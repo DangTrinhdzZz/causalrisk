@@ -1,4 +1,4 @@
-"""Amendment 008 final cross-split execution core with fail-closed R5 lineage."""
+"""Amendment 009 post-stop execution core with fail-closed R6 lineage."""
 
 from __future__ import annotations
 
@@ -25,10 +25,11 @@ from causalrisk.execution_policy import (
     PROVIDER_LIMIT_SNAPSHOT_VERSION,
     SMOKE_CANARY_POLICY,
     SOURCE_MANIFEST_SHA256,
+    SPLIT_POLICIES,
     VIEW_SCHEMA_VERSION,
     SplitExecutionPolicy,
 )
-from causalrisk.lineage import artifact_tree_sha256, file_sha256_bytes, verify_r4_remediation_input
+from causalrisk.lineage import artifact_tree_sha256, file_sha256_bytes, verify_r5_remediation_input
 from causalrisk.parsing import parse_yesno
 from causalrisk.pricing import (
     UsageBreakdown,
@@ -508,6 +509,9 @@ def _validate_execution_inputs(
     lineage: ExecutionLineage,
     max_new_items: int | None,
 ) -> tuple[MethodConfig, ...]:
+    for frozen_policy in (SMOKE_CANARY_POLICY, *SPLIT_POLICIES.values()):
+        if policy.run_id == frozen_policy.run_id and policy != frozen_policy:
+            raise ValueError("fixed execution policy cannot override predecessor or authorization gates")
     if not policy.live_authorized:
         raise ValueError(f"{policy.split} live execution is BLOCKED_NOT_AUTHORIZED")
     if authorization_flag != policy.authorization_flag:
@@ -618,6 +622,10 @@ def execute_split(
         lineage=lineage,
         max_new_items=max_new_items,
     )
+    if policy in (SMOKE_CANARY_POLICY, SPLIT_POLICIES["smoke"]):
+        gate = predecessor_gate_for_policy(artifact_root, policy)
+        if not gate["verified"] or lineage.predecessor_gate != gate:
+            raise ValueError("exact predecessor gate on disk differs from execution lineage")
     sorted_items = tuple(sorted(items, key=lambda item: item.item_id))
     plans = {config.config_id: build_execution_plan(config) for config in configs}
     expected_calls = {
@@ -1008,7 +1016,7 @@ def execute_split(
     return {**summary, "artifact_path": str(run_dir), "run_status": "complete"}
 
 
-def r5_canary_artifact_passed(artifact_root: Path) -> bool:
+def r6_canary_artifact_passed(artifact_root: Path) -> bool:
     run_dir = artifact_root / SMOKE_CANARY_POLICY.run_id
     try:
         manifest = _read_json(run_dir / "manifest.json")
@@ -1029,6 +1037,9 @@ def r5_canary_artifact_passed(artifact_root: Path) -> bool:
             and isinstance(summary.get("transport_attempts"), int)
             and 51 <= summary["transport_attempts"] <= 204
         ):
+            return False
+        predecessor = predecessor_gate_for_policy(artifact_root, SMOKE_CANARY_POLICY)
+        if not predecessor["verified"] or manifest.get("predecessor_gate") != predecessor:
             return False
         _assert_resume_inventory(run_dir, frozenset(METHOD_ORDER))
         configs = {
@@ -1063,6 +1074,8 @@ def r5_canary_artifact_passed(artifact_root: Path) -> bool:
             return False
         records = list(_load_existing_records(run_dir, expected_calls).values())
         attempts = [_read_json(path) for path in (run_dir / "attempts").glob("*/*.json")]
+        if Counter(record["provider"] for record in records) != Counter(SMOKE_CANARY_POLICY.expected_provider_calls):
+            return False
         if len(records) != 51 or len(attempts) != summary["transport_attempts"]:
             return False
         if len({record.get("call_id") for record in records}) != 51:
@@ -1132,7 +1145,7 @@ def r5_canary_artifact_passed(artifact_root: Path) -> bool:
 
 def predecessor_gate_for_policy(artifact_root: Path, policy: SplitExecutionPolicy) -> dict[str, Any]:
     if policy.canary:
-        verified = verify_r4_remediation_input(artifact_root)
+        verified = verify_r5_remediation_input(artifact_root)
         run_dir = artifact_root / policy.predecessor_run_id
         return {
             "run_id": policy.predecessor_run_id,
@@ -1140,10 +1153,11 @@ def predecessor_gate_for_policy(artifact_root: Path, policy: SplitExecutionPolic
             "artifact": f"artifacts/runs/{policy.predecessor_run_id}",
             "artifact_tree_sha256": artifact_tree_sha256(run_dir) if verified else None,
             "manifest_sha256": file_sha256_bytes(run_dir / "manifest.json") if verified else None,
+            "summary_sha256": file_sha256_bytes(run_dir / "summary.json") if verified else None,
             "verified": verified,
         }
     predecessor = artifact_root / policy.predecessor_run_id
-    verified = r5_canary_artifact_passed(artifact_root) if policy.split == "smoke" else False
+    verified = r6_canary_artifact_passed(artifact_root) if policy.split == "smoke" else False
     return {
         "run_id": policy.predecessor_run_id,
         "requirement": policy.predecessor_requirement,

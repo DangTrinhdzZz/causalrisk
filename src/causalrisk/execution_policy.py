@@ -1,10 +1,10 @@
-"""Frozen final cross-split execution policies for Amendment 008 revision R5."""
+"""Frozen post-stop execution policies for Amendment 009 revision R6."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 
-EXECUTION_REVISION = "cross_split_execution_r5"
+EXECUTION_REVISION = "cross_split_execution_r6"
 PROVIDER_LIMIT_SNAPSHOT_VERSION = "provider_limits_2026-09-12"
 VIEW_SCHEMA_VERSION = 2
 CALLS_PER_ITEM = 17
@@ -26,14 +26,12 @@ METHOD_CALLS_PER_ITEM = {
     "C5_COUNCIL_V1": 5,
 }
 PROVIDER_CALLS_PER_ITEM = {
-    "cloudflare_workers_ai": 3,
-    "gemini": 1,
+    "cloudflare_workers_ai": 4,
     "groq": 11,
     "openai": 2,
 }
 MINIMUM_INTERVAL_SECONDS = {
     "cloudflare_workers_ai": 1.0,
-    "gemini": 1.0,
     "groq": 10.0,
     "openai": 1.0,
 }
@@ -50,6 +48,10 @@ R3_ARTIFACT_TREE_SHA256 = "0dccb0852643e0522b1dcd3ecc1113a5170273d97a7e963923e89
 R4_RUN_ID = "cladder-smoke-canary-3-r4"
 R4_MANIFEST_SHA256 = "6880469577b5b5df3b69fc2088f5f82f6d9232f81d577c31418f5232bd153a5c"
 R4_ARTIFACT_TREE_SHA256 = "672f430dc96d409e9ac86000a3727a073a343c6f8297d1760fbaed7dea2c7a45"
+R5_RUN_ID = "cladder-smoke-canary-3-r5"
+R5_MANIFEST_SHA256 = "60475269e6b507c891b16ef02a44ba2672ba0683d7b0d64975ef9be8b4f246f6"
+R5_ARTIFACT_TREE_SHA256 = "2ef7b14410349942a63cb4400bb26e347b57a961400788d83ddd1e1d5c5468d0"
+R5_SUMMARY_SHA256 = "81b1db961d00368f755a554047ef1e596186941a4f4733af1f6b9bcfcdde37a1"
 
 
 @dataclass(frozen=True, slots=True)
@@ -86,11 +88,11 @@ class SplitExecutionPolicy:
 SMOKE_CANARY_POLICY = SplitExecutionPolicy(
     split="smoke",
     item_count=3,
-    run_id="cladder-smoke-canary-3-r5",
+    run_id="cladder-smoke-canary-3-r6",
     authorization_flag="--authorize-live-smoke",
     live_authorized=True,
-    predecessor_run_id=R4_RUN_ID,
-    predecessor_requirement="frozen_failed_r4_remediation_input",
+    predecessor_run_id=R5_RUN_ID,
+    predecessor_requirement="frozen_failed_r5_remediation_input",
     recommended_max_new_items=None,
     canary=True,
 )
@@ -99,7 +101,7 @@ SPLIT_POLICIES = {
     "smoke": SplitExecutionPolicy(
         split="smoke",
         item_count=60,
-        run_id="cladder-smoke-60-r5",
+        run_id="cladder-smoke-60-r6",
         authorization_flag="--authorize-live-smoke",
         live_authorized=True,
         predecessor_run_id=SMOKE_CANARY_POLICY.run_id,
@@ -109,20 +111,20 @@ SPLIT_POLICIES = {
     "calibration": SplitExecutionPolicy(
         split="calibration",
         item_count=300,
-        run_id="cladder-calibration-300-r5",
+        run_id="cladder-calibration-300-r6",
         authorization_flag="--authorize-live-calibration",
         live_authorized=False,
-        predecessor_run_id="cladder-smoke-60-r5",
+        predecessor_run_id="cladder-smoke-60-r6",
         predecessor_requirement="frozen_complete_smoke_operational_review",
         recommended_max_new_items=3,
     ),
     "locked_test": SplitExecutionPolicy(
         split="locked_test",
         item_count=600,
-        run_id="cladder-locked-test-600-r5",
+        run_id="cladder-locked-test-600-r6",
         authorization_flag="--authorize-live-locked-test",
         live_authorized=False,
-        predecessor_run_id="cladder-calibration-300-r5",
+        predecessor_run_id="cladder-calibration-300-r6",
         predecessor_requirement="frozen_complete_calibration_scored_final_configuration_freeze",
         recommended_max_new_items=3,
     ),

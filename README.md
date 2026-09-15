@@ -13,12 +13,13 @@ The pilot excludes causal discovery, extraction of DAGs from unstructured text, 
 ## Current status
 
 Day 1 protocol design and the sealed-split workflow are complete. The frozen
-R1-R4 operational canaries failed before any gold was opened and remain
-immutable audit trails, not benchmark results. Amendment 008 defines the final
-cross-split R5 operational roster and excludes the protocol-noncompliant NVIDIA
-route. No live CLadder call is authorized implicitly: a separately authorized
-R5 three-item canary must pass before smoke-60.
-Calibration and locked-test live execution remain disabled.
+R1-R5 operational canaries failed before any gold was opened and remain
+immutable audit trails, not benchmark results. Amendment 009 defines the user-requested
+post-stop R6 availability remediation, excludes Gemini after four R5 HTTP
+503/UNAVAILABLE attempts, and retains NVIDIA's prior exclusion. No live CLadder call is authorized implicitly: a separately authorized
+R6 three-item canary must pass before smoke-60.
+R6 is the final revision for today's session; a failed canary must not create
+an automatic R7. Calibration and locked-test live execution remain disabled.
 
 ## Planned methodology
 
@@ -55,10 +56,10 @@ uv run pytest
 uv run python scripts/validate_preflight.py
 ```
 
-Structural and smoke execution preflight are expected to pass for the R5
-controlled-smoke configuration. Every active R5 provider/model has an official
+Structural and smoke execution preflight are expected to pass for the R6
+controlled-smoke configuration. Every active R6 provider/model has an official
 normalized price; the historical NVIDIA symbolic-null waiver does not apply to
-R5 execution:
+R6 execution:
 
 ```console
 uv run python scripts/validate_preflight.py --execution --split smoke
@@ -66,7 +67,7 @@ uv run python scripts/validate_preflight.py --execution --split smoke
 
 Do not weaken or bypass a failed gate. Live acknowledgement flags are
 split-specific; only smoke is enabled by policy. Smoke-60 is additionally
-blocked until the frozen R5 three-item canary passes. Calibration and locked
+blocked until the frozen R6 three-item canary passes. Calibration and locked
 test remain `BLOCKED_NOT_AUTHORIZED` even when their flags are supplied.
 
 ## Sealed inference preparation
@@ -89,7 +90,7 @@ and model prompt.
 
 `scripts/smoke_provider.py` is restricted to a non-benchmark arithmetic prompt and requires both an installed verified adapter factory and the explicit `--authorize-live-call` flag. Existing accepted evidence must not be repeated merely because the script exists.
 
-Preview each fixed R5 schedule without API calls or runtime-artifact writes:
+Preview each fixed R6 schedule without API calls or runtime-artifact writes:
 
 ```powershell
 uv run python scripts/run_benchmark.py --dry-run --split smoke

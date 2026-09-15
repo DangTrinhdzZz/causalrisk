@@ -74,6 +74,7 @@ def test_c5_cloudflare_critics_are_independent_role_and_position_calls():
         for call in build_execution_plan(config).calls
         if config.values["provider_assignment"][call.role] == "cloudflare_workers_ai"
     }
-    assert set(calls) == {"graph_identification_critic", "formal_numerical_critic"}
+    assert set(calls) == {"semantic_query_critic", "graph_identification_critic", "formal_numerical_critic"}
+    assert calls["semantic_query_critic"].position == 1
     assert calls["graph_identification_critic"].position == 2
     assert calls["formal_numerical_critic"].position == 3

@@ -2,7 +2,7 @@ schema_version: 1
 config_id: C3_COUNCIL_V1
 method_family: heterogeneous_council
 call_budget: 3
-provider_pool: [groq, gemini, cloudflare_workers_ai, openai]
+provider_pool: [groq, cloudflare_workers_ai, openai]
 provider_assignment:
   analyst: groq
   critic: cloudflare_workers_ai
@@ -34,4 +34,4 @@ expose_gold_label: false
 expose_metadata: false
 runtime_verified: true
 execution_enabled: true
-notes: R5 final role-heterogeneous council; Cloudflare Qwen supplies the Critic role.
+notes: R6 role-heterogeneous council; Cloudflare Qwen supplies the Critic role.

@@ -45,7 +45,12 @@ PROVIDER_CANDIDATES: dict[str, ProviderCandidate] = {
         "gemini-3.8-flash",
         "gemini-3.8",
         "semantic_query_critic",
-        True,
+        False,
+        "excluded_transient_unavailable_r5",
+        (
+            "R5 C5 semantic_query_critic failed all four attempts (0-3) with HTTP 503/UNAVAILABLE; "
+            "retry_count=3, provider/http_5xx. Valid model ID; availability exclusion, not model quality."
+        ),
     ),
     "cloudflare_workers_ai": ProviderCandidate(
         "cloudflare_workers_ai",
